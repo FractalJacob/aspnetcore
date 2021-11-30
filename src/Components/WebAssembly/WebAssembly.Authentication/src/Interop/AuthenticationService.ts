@@ -63,34 +63,12 @@ export interface AuthorizeService {
 
 class OidcAuthorizeService implements AuthorizeService {
     private _userManager: UserManager;
-    private _intialSilentSignIn: Promise<void> | undefined;
+    // private _intialSilentSignIn: Promise<void> | undefined;
     constructor(userManager: UserManager) {
         this._userManager = userManager;
     }
 
-    async trySilentSignIn() {
-        if (!this._intialSilentSignIn) {
-            this._intialSilentSignIn = (async () => {
-                try {
-                    await this._userManager.signinSilent();
-                } catch (e) {
-                    // It is ok to swallow the exception here.
-                    // The user might not be logged in and in that case it
-                    // is expected for signinSilent to fail and throw
-                }
-            })();
-        }
-
-        return this._intialSilentSignIn;
-    }
-
     async getUser() {
-        if (window.parent === window && !window.opener && !window.frameElement && this._userManager.settings.redirect_uri &&
-            !location.href.startsWith(this._userManager.settings.redirect_uri)) {
-            // If we are not inside a hidden iframe, try authenticating silently.
-            await AuthenticationService.instance.trySilentSignIn();
-        }
-
         const user = await this._userManager.getUser();
         return user && user.profile;
     }
@@ -107,26 +85,9 @@ class OidcAuthorizeService implements AuthorizeService {
                 }
             };
         } else {
-            try {
-                const parameters = request && request.scopes ?
-                    { scope: request.scopes.join(' ') } : undefined;
-
-                const newUser = await this._userManager.signinSilent(parameters);
-
-                return {
-                    status: AccessTokenResultStatus.Success,
-                    token: {
-                        grantedScopes: newUser.scopes,
-                        expires: getExpiration(newUser.expires_in),
-                        value: newUser.access_token
-                    }
-                };
-
-            } catch (e) {
-                return {
-                    status: AccessTokenResultStatus.RequiresRedirect
-                };
-            }
+            return {
+                status: AccessTokenResultStatus.RequiresRedirect
+            };
         }
 
         function hasValidAccessToken(user: User | null): user is User {
@@ -156,16 +117,10 @@ class OidcAuthorizeService implements AuthorizeService {
     async signIn(state: unknown) {
         try {
             await this._userManager.clearStaleState();
-            await this._userManager.signinSilent(this.createArguments());
-            return this.success(state);
-        } catch (silentError) {
-            try {
-                await this._userManager.clearStaleState();
-                await this._userManager.signinRedirect(this.createArguments(state));
-                return this.redirect();
-            } catch (redirectError) {
-                return this.error(this.getExceptionMessage(redirectError));
-            }
+            await this._userManager.signinRedirect(this.createArguments(state));
+            return this.redirect();
+        } catch (redirectError) {
+            return this.error(this.getExceptionMessage(redirectError));
         }
     }
 
