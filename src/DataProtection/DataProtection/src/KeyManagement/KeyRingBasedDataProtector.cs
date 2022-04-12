@@ -146,8 +146,8 @@ internal sealed unsafe class KeyRingBasedDataProtector : IDataProtector, IPersis
     private static Guid ReadGuid(void* ptr)
     {
 #if NETCOREAPP
-            // Performs appropriate endianness fixups
-            return new Guid(new ReadOnlySpan<byte>(ptr, sizeof(Guid)));
+        // Performs appropriate endianness fixups
+        return new Guid(new ReadOnlySpan<byte>(ptr, sizeof(Guid)));
 #elif NETSTANDARD2_0 || NETFRAMEWORK
         Debug.Assert(BitConverter.IsLittleEndian);
         return Unsafe.ReadUnaligned<Guid>(ptr);
@@ -187,11 +187,10 @@ internal sealed unsafe class KeyRingBasedDataProtector : IDataProtector, IPersis
         }
 
         // Argument checking will be done by the callee
-        bool requiresMigration, wasRevoked; // unused
         return DangerousUnprotect(protectedData,
             ignoreRevocationErrors: false,
-            requiresMigration: out requiresMigration,
-            wasRevoked: out wasRevoked);
+            requiresMigration: out _,
+            wasRevoked: out _);
     }
 
     private byte[] UnprotectCore(byte[] protectedData, bool allowOperationsOnRevokedKeys, out UnprotectStatus status)
@@ -303,11 +302,11 @@ internal sealed unsafe class KeyRingBasedDataProtector : IDataProtector, IPersis
     private static void WriteGuid(void* ptr, Guid value)
     {
 #if NETCOREAPP
-            var span = new Span<byte>(ptr, sizeof(Guid));
+        var span = new Span<byte>(ptr, sizeof(Guid));
 
-            // Performs appropriate endianness fixups
-            var success = value.TryWriteBytes(span);
-            Debug.Assert(success, "Failed to write Guid.");
+        // Performs appropriate endianness fixups
+        var success = value.TryWriteBytes(span);
+        Debug.Assert(success, "Failed to write Guid.");
 #elif NETSTANDARD2_0 || NETFRAMEWORK
         Debug.Assert(BitConverter.IsLittleEndian);
         Unsafe.WriteUnaligned<Guid>(ptr, value);

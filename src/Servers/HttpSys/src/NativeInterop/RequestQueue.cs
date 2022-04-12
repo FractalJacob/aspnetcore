@@ -1,16 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Microsoft.AspNetCore.HttpSys.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.HttpSys;
 
-internal class RequestQueue
+internal sealed partial class RequestQueue
 {
     private static readonly int BindingInfoSize =
         Marshal.SizeOf<HttpApiTypes.HTTP_BINDING_INFO>();
@@ -19,25 +17,16 @@ internal class RequestQueue
     private readonly ILogger _logger;
     private bool _disposed;
 
-    internal RequestQueue(string requestQueueName, string urlPrefix, ILogger logger, bool receiver)
-        : this(urlGroup: null!, requestQueueName, RequestQueueMode.Attach, logger, receiver)
+    internal RequestQueue(string requestQueueName, ILogger logger)
+        : this(urlGroup: null, requestQueueName, RequestQueueMode.Attach, logger, receiver: true)
     {
-        try
-        {
-            UrlGroup = new UrlGroup(this, UrlPrefix.Create(urlPrefix), logger);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
     }
 
     internal RequestQueue(UrlGroup urlGroup, string? requestQueueName, RequestQueueMode mode, ILogger logger)
         : this(urlGroup, requestQueueName, mode, logger, false)
     { }
 
-    private RequestQueue(UrlGroup urlGroup, string? requestQueueName, RequestQueueMode mode, ILogger logger, bool receiver)
+    private RequestQueue(UrlGroup? urlGroup, string? requestQueueName, RequestQueueMode mode, ILogger logger, bool receiver)
     {
         _mode = mode;
         UrlGroup = urlGroup;
@@ -117,10 +106,15 @@ internal class RequestQueue
     internal SafeHandle Handle { get; }
     internal ThreadPoolBoundHandle BoundHandle { get; }
 
-    internal UrlGroup UrlGroup { get; }
+    internal UrlGroup? UrlGroup { get; }
 
     internal unsafe void AttachToUrlGroup()
     {
+        if (UrlGroup == null)
+        {
+            throw new NotSupportedException("Can't attach when UrlGroup is null");
+        }
+
         Debug.Assert(Created);
         CheckDisposed();
         // Set the association between request queue and url group. After this, requests for registered urls will
@@ -138,6 +132,11 @@ internal class RequestQueue
 
     internal unsafe void DetachFromUrlGroup()
     {
+        if (UrlGroup == null)
+        {
+            throw new NotSupportedException("Can't detach when UrlGroup is null");
+        }
+
         Debug.Assert(Created);
         CheckDisposed();
         // Break the association between request queue and url group. After this, requests for registered urls
@@ -208,14 +207,9 @@ internal class RequestQueue
         }
     }
 
-    private static class Log
+    private static partial class Log
     {
-        private static readonly Action<ILogger, string?, Exception?> _attachedToQueue =
-            LoggerMessage.Define<string?>(LogLevel.Information, LoggerEventIds.AttachedToQueue, "Attached to an existing request queue '{RequestQueueName}', some options do not apply.");
-
-        public static void AttachedToQueue(ILogger logger, string? requestQueueName)
-        {
-            _attachedToQueue(logger, requestQueueName, null);
-        }
+        [LoggerMessage(LoggerEventIds.AttachedToQueue, LogLevel.Information, "Attached to an existing request queue '{RequestQueueName}', some options do not apply.", EventName = "AttachedToQueue")]
+        public static partial void AttachedToQueue(ILogger logger, string? requestQueueName);
     }
 }

@@ -1,7 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
+#pragma warning disable CA1810 // Initialize all static fields inline.
+
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -174,7 +175,7 @@ internal class ReflectedNegotiateState : INegotiateState
         _closeContext.Invoke(_instance, Array.Empty<object>());
     }
 
-    private bool IsCredentialError(SecurityStatusPalErrorCode error)
+    private static bool IsCredentialError(SecurityStatusPalErrorCode error)
     {
         return error == SecurityStatusPalErrorCode.LogonDenied ||
             error == SecurityStatusPalErrorCode.UnknownCredentials ||
@@ -186,7 +187,7 @@ internal class ReflectedNegotiateState : INegotiateState
             error == SecurityStatusPalErrorCode.BadBinding;
     }
 
-    private bool IsClientError(SecurityStatusPalErrorCode error)
+    private static bool IsClientError(SecurityStatusPalErrorCode error)
     {
         return error == SecurityStatusPalErrorCode.InvalidToken ||
             error == SecurityStatusPalErrorCode.CannotPack ||

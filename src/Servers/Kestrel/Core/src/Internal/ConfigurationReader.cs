@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Security.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -164,7 +162,6 @@ internal class ConfigurationReader
         return sniDictionary;
     }
 
-
     private static ClientCertificateMode? ParseClientCertificateMode(string? clientCertificateMode)
     {
         if (Enum.TryParse<ClientCertificateMode>(clientCertificateMode, ignoreCase: true, out var result))
@@ -187,7 +184,17 @@ internal class ConfigurationReader
 
     private static SslProtocols? ParseSslProcotols(IConfigurationSection sslProtocols)
     {
-        var stringProtocols = sslProtocols.Get<string[]>();
+        // Avoid trimming warning from IConfigurationSection.Get<string[]>()
+        string[]? stringProtocols = null;
+        var childrenSections = sslProtocols.GetChildren().ToArray();
+        if (childrenSections.Length > 0)
+        {
+            stringProtocols = new string[childrenSections.Length];
+            for (var i = 0; i < childrenSections.Length; i++)
+            {
+                stringProtocols[i] = childrenSections[i].Value!;
+            }
+        }
 
         return stringProtocols?.Aggregate(SslProtocols.None, (acc, current) =>
         {

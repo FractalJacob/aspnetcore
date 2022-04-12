@@ -1,13 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Http.Result;
 
@@ -17,7 +15,7 @@ public class ChallengeResultTest
     public async Task ChallengeResult_ExecuteAsync()
     {
         // Arrange
-        var result = new ChallengeResult("", null);
+        var result = new ChallengeHttpResult("", null);
         var auth = new Mock<IAuthenticationService>();
         var httpContext = GetHttpContext(auth);
 
@@ -32,7 +30,7 @@ public class ChallengeResultTest
     public async Task ChallengeResult_ExecuteAsync_NoSchemes()
     {
         // Arrange
-        var result = new ChallengeResult(new string[] { }, null);
+        var result = new ChallengeHttpResult(new string[] { }, null);
         var auth = new Mock<IAuthenticationService>();
         var httpContext = GetHttpContext(auth);
 
@@ -56,6 +54,7 @@ public class ChallengeResultTest
     {
         var services = new ServiceCollection();
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         return services;
     }
 }

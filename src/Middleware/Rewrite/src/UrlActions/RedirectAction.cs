@@ -1,9 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.AspNetCore.Rewrite.UrlActions;
 
@@ -45,7 +43,7 @@ internal class RedirectAction : UrlAction
             return;
         }
 
-        if (pattern.IndexOf(Uri.SchemeDelimiter, StringComparison.Ordinal) == -1 && pattern[0] != '/')
+        if (!pattern.Contains(Uri.SchemeDelimiter, StringComparison.Ordinal) && pattern[0] != '/')
         {
             pattern = '/' + pattern;
         }
@@ -54,6 +52,7 @@ internal class RedirectAction : UrlAction
         // url can either contain the full url or the path and query
         // always add to location header.
         // TODO check for false positives
+
         var split = pattern.IndexOf('?');
         if (split >= 0 && QueryStringAppend)
         {

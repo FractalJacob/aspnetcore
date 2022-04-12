@@ -1,18 +1,28 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Http.Result;
 
 public class CreatedResultTests
 {
+    [Fact]
+    public void CreatedResult_ProblemDetails_SetsStatusCodeAndValue()
+    {
+        // Arrange & Act
+        var expectedUrl = "testAction";
+        var obj = new HttpValidationProblemDetails();
+        var result = new CreatedHttpResult(expectedUrl, obj);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status201Created, result.StatusCode);
+        Assert.Equal(StatusCodes.Status201Created, obj.Status);
+        Assert.Equal(obj, result.Value);
+    }
+
     [Fact]
     public void CreatedResult_SetsLocation()
     {
@@ -20,7 +30,7 @@ public class CreatedResultTests
         var location = "http://test/location";
 
         // Act
-        var result = new CreatedResult(location, "testInput");
+        var result = new CreatedHttpResult(location, "testInput");
 
         // Assert
         Assert.Same(location, result.Location);
@@ -32,7 +42,7 @@ public class CreatedResultTests
         // Arrange
         var location = "/test/";
         var httpContext = GetHttpContext();
-        var result = new CreatedResult(location, "testInput");
+        var result = new CreatedHttpResult(location, "testInput");
 
         // Act
         await result.ExecuteAsync(httpContext);
@@ -49,7 +59,7 @@ public class CreatedResultTests
         var location = "/test/";
         var httpContext = GetHttpContext();
         httpContext.Response.Headers["Location"] = "/different/location/";
-        var result = new CreatedResult(location, "testInput");
+        var result = new CreatedHttpResult(location, "testInput");
 
         // Act
         await result.ExecuteAsync(httpContext);

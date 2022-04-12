@@ -1,11 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
+#pragma warning disable CA1810 // Initialize all static fields inline. This is a code generator.
+
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Net.Http.HPack;
 using System.Net.Http.QPack;
 using System.Reflection;
@@ -146,8 +145,8 @@ public class KnownHeaders
             HeaderNames.Baggage,
         })
         .Concat(corsRequestHeaders)
-        .OrderBy(header => header)
         .OrderBy(header => !requestPrimaryHeaders.Contains(header))
+        .ThenBy(header => header)
         .Select((header, index) => new KnownHeader
         {
             Name = header,
@@ -215,8 +214,8 @@ public class KnownHeaders
             HeaderNames.Trailer,
         })
         .Concat(corsResponseHeaders)
-        .OrderBy(header => header)
         .OrderBy(header => !responsePrimaryHeaders.Contains(header))
+        .ThenBy(header => header)
         .Select((header, index) => new KnownHeader
         {
             Name = header,
@@ -240,8 +239,8 @@ public class KnownHeaders
             HeaderNames.GrpcMessage,
             HeaderNames.GrpcStatus
         }
-        .OrderBy(header => header)
         .OrderBy(header => !responsePrimaryHeaders.Contains(header))
+        .ThenBy(header => header)
         .Select((header, index) => new KnownHeader
         {
             Name = header,
@@ -293,7 +292,14 @@ public class KnownHeaders
          $@"switch (index)
             {{{Each(values, header => $@"{Each(header.HPackStaticTableIndexes, index => $@"
                 case {index}:")}
-                    {AppendHPackSwitchSection(header)}")}
+                    {AppendIndexedSwitchSection(header.Header)}")}
+            }}";
+
+    static string AppendQPackSwitch(IEnumerable<QPackGroup> values) =>
+         $@"switch (index)
+            {{{Each(values, header => $@"{Each(header.QPackStaticTableFields, fields => $@"
+                case {fields.Index}:")}
+                    {AppendIndexedSwitchSection(header.Header)}")}
             }}";
 
     static string AppendValue(bool returnTrue = false) =>
@@ -333,9 +339,8 @@ public class KnownHeaders
                     values = AppendValue(values, valueStr);
                 }}";
 
-    static string AppendHPackSwitchSection(HPackGroup group)
+    static string AppendIndexedSwitchSection(KnownHeader header)
     {
-        var header = group.Header;
         if (header.Name == HeaderNames.ContentLength)
         {
             return $@"var customEncoding = ReferenceEquals(EncodingSelector, KestrelServerOptions.DefaultHeaderEncodingSelector)
@@ -376,7 +381,7 @@ public class KnownHeaders
             firstTermVar = "";
         }
 
-        string GenerateIfBody(KnownHeader header, string extraIndent = "")
+        static string GenerateIfBody(KnownHeader header, string extraIndent = "")
         {
             if (header.Name == HeaderNames.ContentLength)
             {
@@ -443,7 +448,7 @@ public class KnownHeaders
         public string SetBit() => $"_bits |= {"0x" + (1L << Index).ToString("x", CultureInfo.InvariantCulture)}L";
         public string ClearBit() => $"_bits &= ~{"0x" + (1L << Index).ToString("x", CultureInfo.InvariantCulture)}L";
 
-        private string ResolveIdentifier(string name)
+        private static string ResolveIdentifier(string name)
         {
             // Check the 3 lowercase headers
             switch (name)
@@ -466,7 +471,7 @@ public class KnownHeaders
             return identifier;
         }
 
-        private void GetMaskAndComp(string name, int offset, int count, out ulong mask, out ulong comp)
+        private static void GetMaskAndComp(string name, int offset, int count, out ulong mask, out ulong comp)
         {
             mask = 0;
             comp = 0;
@@ -479,9 +484,9 @@ public class KnownHeaders
             }
         }
 
-        private string NameTerm(string name, int offset, int count, string type, string suffix)
+        private static string NameTerm(string name, int offset, int count, string type, string suffix)
         {
-            GetMaskAndComp(name, offset, count, out var mask, out var comp);
+            GetMaskAndComp(name, offset, count, out var mask, out _);
 
             if (offset == 0)
             {
@@ -512,23 +517,23 @@ public class KnownHeaders
 
         }
 
-        private string EqualityTerm(string name, int offset, int count, string type, string suffix)
+        private static string EqualityTerm(string name, int offset, int count, string suffix)
         {
-            GetMaskAndComp(name, offset, count, out var mask, out var comp);
+            GetMaskAndComp(name, offset, count, out _, out var comp);
 
             return $"0x{comp:x}{suffix}";
         }
 
-        private string Term(string name, int offset, int count, string type, string suffix)
+        private static string Term(string name, int offset, int count, string type, string suffix)
         {
-            GetMaskAndComp(name, offset, count, out var mask, out var comp);
+            GetMaskAndComp(name, offset, count, out _, out _);
 
-            return $"({NameTerm(name, offset, count, type, suffix)} == {EqualityTerm(name, offset, count, type, suffix)})";
+            return $"({NameTerm(name, offset, count, type, suffix)} == {EqualityTerm(name, offset, count, suffix)})";
         }
 
         public string FirstNameIgnoreCaseSegment()
         {
-            var result = "";
+            string result;
             if (Name.Length >= 8)
             {
                 result = NameTerm(Name, 0, 8, "ulong", "uL");
@@ -597,7 +602,7 @@ public class KnownHeaders
                     {
                         if (isFirst)
                         {
-                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 8, "ulong", "uL")})";
+                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 8, "uL")})";
                         }
                         else
                         {
@@ -610,7 +615,7 @@ public class KnownHeaders
                     {
                         if (isFirst)
                         {
-                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 4, "uint", "u")})";
+                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 4, "u")})";
                         }
                         else
                         {
@@ -622,7 +627,7 @@ public class KnownHeaders
                     {
                         if (isFirst)
                         {
-                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 2, "ushort", "u")})";
+                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 2, "u")})";
                         }
                         else
                         {
@@ -634,7 +639,7 @@ public class KnownHeaders
                     {
                         if (isFirst)
                         {
-                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 1, "byte", "u")})";
+                            result = $"({firstTermVar} == {EqualityTerm(Name, index, 1, "u")})";
                         }
                         else
                         {
@@ -651,7 +656,7 @@ public class KnownHeaders
 
         public string EqualIgnoreCaseBytesFirstTerm()
         {
-            var result = "";
+            string result;
             if (Name.Length >= 8)
             {
                 result = Term(Name, 0, 8, "ulong", "uL");
@@ -1303,15 +1308,35 @@ $@"        private void Clear(long bitsToClear)
         }}
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public unsafe bool TryHPackAppend(int index, ReadOnlySpan<byte> value)
+        public unsafe bool TryHPackAppend(int index, ReadOnlySpan<byte> value, bool checkForNewlineChars)
         {{
             ref StringValues values = ref Unsafe.AsRef<StringValues>(null);
             var nameStr = string.Empty;
             var flag = 0L;
-            var checkForNewlineChars = true;
 
             // Does the HPack static index match any ""known"" headers
             {AppendHPackSwitch(GroupHPack(loop.Headers))}
+
+            if (flag != 0)
+            {{
+                {AppendValue(returnTrue: true)}
+                return true;
+            }}
+            else
+            {{
+                return false;
+            }}
+        }}
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public unsafe bool TryQPackAppend(int index, ReadOnlySpan<byte> value, bool checkForNewlineChars)
+        {{
+            ref StringValues values = ref Unsafe.AsRef<StringValues>(null);
+            var nameStr = string.Empty;
+            var flag = 0L;
+
+            // Does the QPack static index match any ""known"" headers
+            {AppendQPackSwitch(GroupQPack(loop.Headers))}
 
             if (flag != 0)
             {{

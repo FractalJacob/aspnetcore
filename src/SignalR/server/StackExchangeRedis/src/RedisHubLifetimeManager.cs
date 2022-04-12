@@ -1,13 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.AspNetCore.SignalR.StackExchangeRedis.Internal;
@@ -90,12 +86,11 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
         var feature = new RedisFeature();
         connection.Features.Set<IRedisFeature>(feature);
 
-        var connectionTask = Task.CompletedTask;
         var userTask = Task.CompletedTask;
 
         _connections.Add(connection);
 
-        connectionTask = SubscribeToConnection(connection);
+        var connectionTask = SubscribeToConnection(connection);
 
         if (!string.IsNullOrEmpty(connection.UserIdentifier))
         {
@@ -116,7 +111,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
         RedisLog.Unsubscribe(_logger, connectionChannel);
         tasks.Add(_bus!.UnsubscribeAsync(connectionChannel));
 
-        var feature = connection.Features.Get<IRedisFeature>()!;
+        var feature = connection.Features.GetRequiredFeature<IRedisFeature>();
         var groupNames = feature.Groups;
 
         if (groupNames != null)
@@ -320,7 +315,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
 
     private Task AddGroupAsyncCore(HubConnectionContext connection, string groupName)
     {
-        var feature = connection.Features.Get<IRedisFeature>()!;
+        var feature = connection.Features.GetRequiredFeature<IRedisFeature>();
         var groupNames = feature.Groups;
 
         lock (groupNames)
@@ -350,7 +345,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
             return _bus!.UnsubscribeAsync(channelName);
         });
 
-        var feature = connection.Features.Get<IRedisFeature>()!;
+        var feature = connection.Features.GetRequiredFeature<IRedisFeature>();
         var groupNames = feature.Groups;
         if (groupNames != null)
         {
@@ -366,7 +361,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
         var id = Interlocked.Increment(ref _internalId);
         var ack = _ackHandler.CreateAck(id);
         // Send Add/Remove Group to other servers and wait for an ack or timeout
-        var message = _protocol.WriteGroupCommand(new RedisGroupCommand(id, _serverName, action, groupName, connectionId));
+        var message = RedisProtocol.WriteGroupCommand(new RedisGroupCommand(id, _serverName, action, groupName, connectionId));
         await PublishAsync(_channels.GroupManagement, message);
 
         await ack;
@@ -403,7 +398,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
             {
                 RedisLog.ReceivedFromChannel(_logger, _channels.All);
 
-                var invocation = _protocol.ReadInvocation((byte[])channelMessage.Message);
+                var invocation = RedisProtocol.ReadInvocation((byte[])channelMessage.Message);
 
                 var tasks = new List<Task>(_connections.Count);
 
@@ -431,13 +426,13 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
         {
             try
             {
-                var groupMessage = _protocol.ReadGroupCommand((byte[])channelMessage.Message);
+                var groupMessage = RedisProtocol.ReadGroupCommand((byte[])channelMessage.Message);
 
                 var connection = _connections[groupMessage.ConnectionId];
                 if (connection == null)
                 {
-                        // user not on this server
-                        return;
+                    // user not on this server
+                    return;
                 }
 
                 if (groupMessage.Action == GroupAction.Remove)
@@ -450,8 +445,8 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
                     await AddGroupAsyncCore(connection, groupMessage.GroupName);
                 }
 
-                    // Send an ack to the server that sent the original command.
-                    await PublishAsync(_channels.Ack(groupMessage.ServerName), _protocol.WriteAck(groupMessage.Id));
+                // Send an ack to the server that sent the original command.
+                await PublishAsync(_channels.Ack(groupMessage.ServerName), RedisProtocol.WriteAck(groupMessage.Id));
             }
             catch (Exception ex)
             {
@@ -466,7 +461,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
         var channel = await _bus!.SubscribeAsync(_channels.Ack(_serverName));
         channel.OnMessage(channelMessage =>
         {
-            var ackId = _protocol.ReadAck((byte[])channelMessage.Message);
+            var ackId = RedisProtocol.ReadAck((byte[])channelMessage.Message);
 
             _ackHandler.TriggerAck(ackId);
         });
@@ -480,7 +475,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
         var channel = await _bus!.SubscribeAsync(connectionChannel);
         channel.OnMessage(channelMessage =>
         {
-            var invocation = _protocol.ReadInvocation((byte[])channelMessage.Message);
+            var invocation = RedisProtocol.ReadInvocation((byte[])channelMessage.Message);
             return connection.WriteAsync(invocation.Message).AsTask();
         });
     }
@@ -497,7 +492,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
             {
                 try
                 {
-                    var invocation = _protocol.ReadInvocation((byte[])channelMessage.Message);
+                    var invocation = RedisProtocol.ReadInvocation((byte[])channelMessage.Message);
 
                     var tasks = new List<Task>(subscriptions.Count);
                     foreach (var userConnection in subscriptions)
@@ -523,7 +518,7 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
         {
             try
             {
-                var invocation = _protocol.ReadInvocation((byte[])channelMessage.Message);
+                var invocation = RedisProtocol.ReadInvocation((byte[])channelMessage.Message);
 
                 var tasks = new List<Task>(groupConnections.Count);
                 foreach (var groupConnection in groupConnections)
@@ -560,9 +555,9 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
 
                     _redisServerConnection.ConnectionRestored += (_, e) =>
                     {
-                            // We use the subscription connection type
-                            // Ignore messages from the interactive connection (avoids duplicates)
-                            if (e.ConnectionType == ConnectionType.Interactive)
+                        // We use the subscription connection type
+                        // Ignore messages from the interactive connection (avoids duplicates)
+                        if (e.ConnectionType == ConnectionType.Interactive)
                         {
                             return;
                         }
@@ -572,9 +567,9 @@ public class RedisHubLifetimeManager<THub> : HubLifetimeManager<THub>, IDisposab
 
                     _redisServerConnection.ConnectionFailed += (_, e) =>
                     {
-                            // We use the subscription connection type
-                            // Ignore messages from the interactive connection (avoids duplicates)
-                            if (e.ConnectionType == ConnectionType.Interactive)
+                        // We use the subscription connection type
+                        // Ignore messages from the interactive connection (avoids duplicates)
+                        if (e.ConnectionType == ConnectionType.Interactive)
                         {
                             return;
                         }

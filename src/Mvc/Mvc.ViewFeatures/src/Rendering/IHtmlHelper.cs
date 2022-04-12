@@ -1,10 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -375,7 +372,9 @@ public interface IHtmlHelper
     /// <typeparam name="TEnum">Type to generate a select list for.</typeparam>
     /// <returns>
     /// An <see cref="IEnumerable{SelectListItem}"/> containing the select list for the given
-    /// <typeparamref name="TEnum"/>.
+    /// <typeparamref name="TEnum"/>,
+    /// with a decimal representation of the ordinal as <see cref="SelectListItem.Value"/>
+    /// and the display name as <see cref="SelectListItem.Text"/>.
     /// </returns>
     /// <exception cref="ArgumentException">
     /// Thrown if <typeparamref name="TEnum"/> is not an <see cref="Enum"/> or if it has a

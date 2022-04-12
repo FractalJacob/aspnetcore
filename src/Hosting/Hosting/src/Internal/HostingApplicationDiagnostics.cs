@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Http;
@@ -58,7 +57,6 @@ internal class HostingApplicationDiagnostics
         var diagnosticListenerEnabled = _diagnosticListener.IsEnabled();
         var diagnosticListenerActivityCreationEnabled = (diagnosticListenerEnabled && _diagnosticListener.IsEnabled(ActivityName, httpContext));
         var loggingEnabled = _logger.IsEnabled(LogLevel.Critical);
-
 
         if (loggingEnabled || diagnosticListenerActivityCreationEnabled || _activitySource.HasListeners())
         {
@@ -151,7 +149,6 @@ internal class HostingApplicationDiagnostics
                     // so call GetTimestamp if currentTimestamp is zero (from above)
                     RecordUnhandledExceptionDiagnostics(httpContext, currentTimestamp, exception);
                 }
-
             }
         }
 
@@ -225,41 +222,83 @@ internal class HostingApplicationDiagnostics
         }
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026",
+        Justification = "The values being passed into Write have the commonly used properties being preserved with DynamicDependency.")]
+    private static void WriteDiagnosticEvent<TValue>(
+        DiagnosticSource diagnosticSource, string name, TValue value)
+    {
+        diagnosticSource.Write(name, value);
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void RecordBeginRequestDiagnostics(HttpContext httpContext, long startTimestamp)
     {
-        _diagnosticListener.Write(
+        WriteDiagnosticEvent(
+            _diagnosticListener,
             DeprecatedDiagnosticsBeginRequestKey,
-            new
-            {
-                httpContext = httpContext,
-                timestamp = startTimestamp
-            });
+            new DeprecatedRequestData(httpContext, startTimestamp));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void RecordEndRequestDiagnostics(HttpContext httpContext, long currentTimestamp)
     {
-        _diagnosticListener.Write(
+        WriteDiagnosticEvent(
+            _diagnosticListener,
             DeprecatedDiagnosticsEndRequestKey,
-            new
-            {
-                httpContext = httpContext,
-                timestamp = currentTimestamp
-            });
+            new DeprecatedRequestData(httpContext, currentTimestamp));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void RecordUnhandledExceptionDiagnostics(HttpContext httpContext, long currentTimestamp, Exception exception)
     {
-        _diagnosticListener.Write(
+        WriteDiagnosticEvent(
+            _diagnosticListener,
             DiagnosticsUnhandledExceptionKey,
-            new
-            {
-                httpContext = httpContext,
-                timestamp = currentTimestamp,
-                exception = exception
-            });
+            new UnhandledExceptionData(httpContext, currentTimestamp, exception));
+    }
+
+    private sealed class DeprecatedRequestData
+    {
+        // Common properties. Properties not in this list could be trimmed.
+        [DynamicDependency(nameof(HttpContext.Request), typeof(HttpContext))]
+        [DynamicDependency(nameof(HttpContext.Response), typeof(HttpContext))]
+        [DynamicDependency(nameof(HttpRequest.Path), typeof(HttpRequest))]
+        [DynamicDependency(nameof(HttpRequest.Method), typeof(HttpRequest))]
+        [DynamicDependency(nameof(HttpResponse.StatusCode), typeof(HttpResponse))]
+        internal DeprecatedRequestData(HttpContext httpContext, long timestamp)
+        {
+            this.httpContext = httpContext;
+            this.timestamp = timestamp;
+        }
+
+        // Compatibility with anonymous object property names
+        public HttpContext httpContext { get; }
+        public long timestamp { get; }
+
+        public override string ToString() => $"{{ {nameof(httpContext)} = {httpContext}, {nameof(timestamp)} = {timestamp} }}";
+    }
+
+    private sealed class UnhandledExceptionData
+    {
+        // Common properties. Properties not in this list could be trimmed.
+        [DynamicDependency(nameof(HttpContext.Request), typeof(HttpContext))]
+        [DynamicDependency(nameof(HttpContext.Response), typeof(HttpContext))]
+        [DynamicDependency(nameof(HttpRequest.Path), typeof(HttpRequest))]
+        [DynamicDependency(nameof(HttpRequest.Method), typeof(HttpRequest))]
+        [DynamicDependency(nameof(HttpResponse.StatusCode), typeof(HttpResponse))]
+        internal UnhandledExceptionData(HttpContext httpContext, long timestamp, Exception exception)
+        {
+            this.httpContext = httpContext;
+            this.timestamp = timestamp;
+            this.exception = exception;
+        }
+
+        // Compatibility with anonymous object property names
+        public HttpContext httpContext { get; }
+        public long timestamp { get; }
+        public Exception exception { get; }
+
+        public override string ToString() => $"{{ {nameof(httpContext)} = {httpContext}, {nameof(timestamp)} = {timestamp}, {nameof(exception)} = {exception} }}";
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -308,7 +347,7 @@ internal class HostingApplicationDiagnostics
             });
 
             // AddBaggage adds items at the beginning  of the list, so we need to add them in reverse to keep the same order as the client
-            // By contract, the propagator has already reversed the order of items so we need not reverse it again 
+            // By contract, the propagator has already reversed the order of items so we need not reverse it again
             // Order could be important if baggage has two items with the same key (that is allowed by the contract)
             if (baggage is not null)
             {
@@ -351,7 +390,7 @@ internal class HostingApplicationDiagnostics
     private Activity StartActivity(Activity activity, HttpContext httpContext)
     {
         activity.Start();
-        _diagnosticListener.Write(ActivityStartKey, httpContext);
+        WriteDiagnosticEvent(_diagnosticListener, ActivityStartKey, httpContext);
         return activity;
     }
 
@@ -363,13 +402,13 @@ internal class HostingApplicationDiagnostics
         {
             activity.SetEndTime(DateTime.UtcNow);
         }
-        _diagnosticListener.Write(ActivityStopKey, httpContext);
+        WriteDiagnosticEvent(_diagnosticListener, ActivityStopKey, httpContext);
         activity.Stop();    // Resets Activity.Current (we want this after the Write)
     }
 
     private static class Log
     {
-        public static IDisposable RequestScope(ILogger logger, HttpContext httpContext)
+        public static IDisposable? RequestScope(ILogger logger, HttpContext httpContext)
         {
             return logger.BeginScope(new HostingLogScope(httpContext));
         }

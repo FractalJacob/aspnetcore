@@ -9,15 +9,15 @@
     <AspNetCoreMajorVersion>7</AspNetCoreMajorVersion>
     <AspNetCoreMinorVersion>0</AspNetCoreMinorVersion>
     <AspNetCorePatchVersion>0</AspNetCorePatchVersion>
-    <PreReleaseVersionIteration>1</PreReleaseVersionIteration>
+    <PreReleaseVersionIteration>4</PreReleaseVersionIteration>
     <ValidateBaseline>true</ValidateBaseline>
     <!--
         When StabilizePackageVersion is set to 'true', this branch will produce stable outputs for 'Shipping' packages
     -->
     <StabilizePackageVersion Condition="'$(StabilizePackageVersion)' == ''">false</StabilizePackageVersion>
     <DotNetFinalVersionKind Condition="'$(StabilizePackageVersion)' == 'true'">release</DotNetFinalVersionKind>
-    <PreReleaseVersionLabel>alpha</PreReleaseVersionLabel>
-    <PreReleaseBrandingLabel>Alpha $(PreReleaseVersionIteration)</PreReleaseBrandingLabel>
+    <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
+    <PreReleaseBrandingLabel>Preview $(PreReleaseVersionIteration)</PreReleaseBrandingLabel>
     <IncludePreReleaseLabelInPackageVersion>true</IncludePreReleaseLabelInPackageVersion>
     <IncludePreReleaseLabelInPackageVersion Condition=" '$(DotNetFinalVersionKind)' == 'release' ">false</IncludePreReleaseLabelInPackageVersion>
     <AspNetCoreMajorMinorVersion>$(AspNetCoreMajorVersion).$(AspNetCoreMinorVersion)</AspNetCoreMajorMinorVersion>
@@ -29,8 +29,6 @@
       It's also used in root Directory.Build.targets to determine the version of the last-built targeting pack.
     -->
     <TargetingPackVersionPrefix>$(VersionPrefix)</TargetingPackVersionPrefix>
-    <!-- Targeting packs do not produce patch versions in servicing builds. No API changes are allowed in patches. -->
-    <TargetingPackVersionPrefix Condition="'$(IsTargetingPackBuilding)' != 'true'">$(AspNetCoreMajorMinorVersion).0</TargetingPackVersionPrefix>
     <ExperimentalVersionPrefix>0.3.$(AspNetCorePatchVersion)</ExperimentalVersionPrefix>
     <!-- ANCM versioning is intentionally 10 + AspNetCoreMajorVersion because earlier versions of ANCM shipped as 8.x. -->
     <AspNetCoreModuleVersionMajor>$([MSBuild]::Add(10, $(AspNetCoreMajorVersion)))</AspNetCoreModuleVersionMajor>
@@ -65,77 +63,79 @@
   -->
   <PropertyGroup Label="Automated">
     <!-- Packages from dotnet/runtime -->
-    <MicrosoftExtensionsDependencyModelVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsDependencyModelVersion>
-    <MicrosoftNETCoreAppRefVersion>7.0.0-alpha.1.21576.4</MicrosoftNETCoreAppRefVersion>
-    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0-alpha.1.21576.4</MicrosoftNETCoreAppRuntimewinx64Version>
-    <MicrosoftNETRuntimeMonoAOTCompilerTaskVersion>7.0.0-alpha.1.21576.4</MicrosoftNETRuntimeMonoAOTCompilerTaskVersion>
-    <MicrosoftNETRuntimeWebAssemblySdkVersion>7.0.0-alpha.1.21576.4</MicrosoftNETRuntimeWebAssemblySdkVersion>
-    <MicrosoftNETCoreAppRuntimeAOTwinx64CrossbrowserwasmVersion>7.0.0-alpha.1.21576.4</MicrosoftNETCoreAppRuntimeAOTwinx64CrossbrowserwasmVersion>
-    <MicrosoftNETCoreBrowserDebugHostTransportVersion>7.0.0-alpha.1.21576.4</MicrosoftNETCoreBrowserDebugHostTransportVersion>
-    <MicrosoftExtensionsCachingAbstractionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsCachingAbstractionsVersion>
-    <MicrosoftExtensionsCachingMemoryVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsCachingMemoryVersion>
-    <MicrosoftExtensionsConfigurationAbstractionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationAbstractionsVersion>
-    <MicrosoftExtensionsConfigurationBinderVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationBinderVersion>
-    <MicrosoftExtensionsConfigurationCommandLineVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationCommandLineVersion>
-    <MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>
-    <MicrosoftExtensionsConfigurationFileExtensionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationFileExtensionsVersion>
-    <MicrosoftExtensionsConfigurationIniVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationIniVersion>
-    <MicrosoftExtensionsConfigurationJsonVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationJsonVersion>
-    <MicrosoftExtensionsConfigurationVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationVersion>
-    <MicrosoftExtensionsConfigurationUserSecretsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationUserSecretsVersion>
-    <MicrosoftExtensionsConfigurationXmlVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsConfigurationXmlVersion>
-    <MicrosoftExtensionsDependencyInjectionAbstractionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsDependencyInjectionAbstractionsVersion>
-    <MicrosoftExtensionsDependencyInjectionVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsDependencyInjectionVersion>
-    <MicrosoftExtensionsFileProvidersAbstractionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsFileProvidersAbstractionsVersion>
-    <MicrosoftExtensionsFileProvidersCompositeVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsFileProvidersCompositeVersion>
-    <MicrosoftExtensionsFileProvidersPhysicalVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsFileProvidersPhysicalVersion>
-    <MicrosoftExtensionsFileSystemGlobbingVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsFileSystemGlobbingVersion>
-    <MicrosoftExtensionsHostFactoryResolverSourcesVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsHostFactoryResolverSourcesVersion>
-    <MicrosoftExtensionsHostingAbstractionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsHostingAbstractionsVersion>
-    <MicrosoftExtensionsHostingVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsHostingVersion>
-    <MicrosoftExtensionsHttpVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsHttpVersion>
-    <MicrosoftExtensionsLoggingAbstractionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingAbstractionsVersion>
-    <MicrosoftExtensionsLoggingConfigurationVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingConfigurationVersion>
-    <MicrosoftExtensionsLoggingConsoleVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingConsoleVersion>
-    <MicrosoftExtensionsLoggingDebugVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingDebugVersion>
-    <MicrosoftExtensionsLoggingEventSourceVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingEventSourceVersion>
-    <MicrosoftExtensionsLoggingEventLogVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingEventLogVersion>
-    <MicrosoftExtensionsLoggingVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingVersion>
-    <MicrosoftExtensionsLoggingTraceSourceVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsLoggingTraceSourceVersion>
-    <MicrosoftExtensionsOptionsConfigurationExtensionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsOptionsConfigurationExtensionsVersion>
-    <MicrosoftExtensionsOptionsDataAnnotationsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsOptionsDataAnnotationsVersion>
-    <MicrosoftExtensionsOptionsVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsOptionsVersion>
-    <MicrosoftExtensionsPrimitivesVersion>7.0.0-alpha.1.21576.4</MicrosoftExtensionsPrimitivesVersion>
-    <MicrosoftInternalRuntimeAspNetCoreTransportVersion>7.0.0-alpha.1.21576.4</MicrosoftInternalRuntimeAspNetCoreTransportVersion>
-    <SystemDiagnosticsDiagnosticSourceVersion>7.0.0-alpha.1.21576.4</SystemDiagnosticsDiagnosticSourceVersion>
-    <SystemDiagnosticsEventLogVersion>7.0.0-alpha.1.21576.4</SystemDiagnosticsEventLogVersion>
-    <SystemDirectoryServicesProtocolsVersion>7.0.0-alpha.1.21576.4</SystemDirectoryServicesProtocolsVersion>
-    <SystemIOPipelinesVersion>7.0.0-alpha.1.21576.4</SystemIOPipelinesVersion>
-    <SystemNetHttpJsonVersion>7.0.0-alpha.1.21576.4</SystemNetHttpJsonVersion>
-    <SystemNetHttpWinHttpHandlerVersion>7.0.0-alpha.1.21576.4</SystemNetHttpWinHttpHandlerVersion>
-    <SystemReflectionMetadataVersion>7.0.0-alpha.1.21576.4</SystemReflectionMetadataVersion>
-    <SystemResourcesExtensionsVersion>7.0.0-alpha.1.21576.4</SystemResourcesExtensionsVersion>
-    <SystemRuntimeCompilerServicesUnsafeVersion>7.0.0-alpha.1.21576.4</SystemRuntimeCompilerServicesUnsafeVersion>
-    <SystemSecurityCryptographyPkcsVersion>7.0.0-alpha.1.21576.4</SystemSecurityCryptographyPkcsVersion>
-    <SystemSecurityCryptographyXmlVersion>7.0.0-alpha.1.21576.4</SystemSecurityCryptographyXmlVersion>
-    <SystemServiceProcessServiceControllerVersion>7.0.0-alpha.1.21576.4</SystemServiceProcessServiceControllerVersion>
-    <SystemTextEncodingsWebVersion>7.0.0-alpha.1.21576.4</SystemTextEncodingsWebVersion>
-    <SystemTextJsonVersion>7.0.0-alpha.1.21576.4</SystemTextJsonVersion>
-    <SystemThreadingChannelsVersion>7.0.0-alpha.1.21576.4</SystemThreadingChannelsVersion>
+    <MicrosoftExtensionsDependencyModelVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsDependencyModelVersion>
+    <MicrosoftNETCoreAppRefVersion>7.0.0-preview.4.22208.8</MicrosoftNETCoreAppRefVersion>
+    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0-preview.4.22208.8</MicrosoftNETCoreAppRuntimewinx64Version>
+    <MicrosoftNETRuntimeMonoAOTCompilerTaskVersion>7.0.0-preview.4.22208.8</MicrosoftNETRuntimeMonoAOTCompilerTaskVersion>
+    <MicrosoftNETRuntimeWebAssemblySdkVersion>7.0.0-preview.4.22208.8</MicrosoftNETRuntimeWebAssemblySdkVersion>
+    <MicrosoftNETCoreAppRuntimeAOTwinx64CrossbrowserwasmVersion>7.0.0-preview.4.22208.8</MicrosoftNETCoreAppRuntimeAOTwinx64CrossbrowserwasmVersion>
+    <MicrosoftNETCoreBrowserDebugHostTransportVersion>7.0.0-preview.4.22208.8</MicrosoftNETCoreBrowserDebugHostTransportVersion>
+    <MicrosoftExtensionsCachingAbstractionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsCachingAbstractionsVersion>
+    <MicrosoftExtensionsCachingMemoryVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsCachingMemoryVersion>
+    <MicrosoftExtensionsConfigurationAbstractionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationAbstractionsVersion>
+    <MicrosoftExtensionsConfigurationBinderVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationBinderVersion>
+    <MicrosoftExtensionsConfigurationCommandLineVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationCommandLineVersion>
+    <MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>
+    <MicrosoftExtensionsConfigurationFileExtensionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationFileExtensionsVersion>
+    <MicrosoftExtensionsConfigurationIniVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationIniVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsConfigurationVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationVersion>
+    <MicrosoftExtensionsConfigurationUserSecretsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationUserSecretsVersion>
+    <MicrosoftExtensionsConfigurationXmlVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsConfigurationXmlVersion>
+    <MicrosoftExtensionsDependencyInjectionAbstractionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsDependencyInjectionAbstractionsVersion>
+    <MicrosoftExtensionsDependencyInjectionVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsDependencyInjectionVersion>
+    <MicrosoftExtensionsFileProvidersAbstractionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsFileProvidersAbstractionsVersion>
+    <MicrosoftExtensionsFileProvidersCompositeVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsFileProvidersCompositeVersion>
+    <MicrosoftExtensionsFileProvidersPhysicalVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsFileProvidersPhysicalVersion>
+    <MicrosoftExtensionsFileSystemGlobbingVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsFileSystemGlobbingVersion>
+    <MicrosoftExtensionsHostFactoryResolverSourcesVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsHostFactoryResolverSourcesVersion>
+    <MicrosoftExtensionsHostingAbstractionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsHostingAbstractionsVersion>
+    <MicrosoftExtensionsHostingVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsHostingVersion>
+    <MicrosoftExtensionsHttpVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsHttpVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingConfigurationVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingConfigurationVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsLoggingDebugVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingDebugVersion>
+    <MicrosoftExtensionsLoggingEventSourceVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingEventSourceVersion>
+    <MicrosoftExtensionsLoggingEventLogVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingEventLogVersion>
+    <MicrosoftExtensionsLoggingVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingTraceSourceVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsLoggingTraceSourceVersion>
+    <MicrosoftExtensionsOptionsConfigurationExtensionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsOptionsConfigurationExtensionsVersion>
+    <MicrosoftExtensionsOptionsDataAnnotationsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsOptionsDataAnnotationsVersion>
+    <MicrosoftExtensionsOptionsVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsOptionsVersion>
+    <MicrosoftExtensionsPrimitivesVersion>7.0.0-preview.4.22208.8</MicrosoftExtensionsPrimitivesVersion>
+    <MicrosoftInternalRuntimeAspNetCoreTransportVersion>7.0.0-preview.4.22208.8</MicrosoftInternalRuntimeAspNetCoreTransportVersion>
+    <SystemDiagnosticsDiagnosticSourceVersion>7.0.0-preview.4.22208.8</SystemDiagnosticsDiagnosticSourceVersion>
+    <SystemDiagnosticsEventLogVersion>7.0.0-preview.4.22208.8</SystemDiagnosticsEventLogVersion>
+    <SystemDirectoryServicesProtocolsVersion>7.0.0-preview.4.22208.8</SystemDirectoryServicesProtocolsVersion>
+    <SystemIOPipelinesVersion>7.0.0-preview.4.22208.8</SystemIOPipelinesVersion>
+    <SystemNetHttpJsonVersion>7.0.0-preview.4.22208.8</SystemNetHttpJsonVersion>
+    <SystemNetHttpWinHttpHandlerVersion>7.0.0-preview.4.22208.8</SystemNetHttpWinHttpHandlerVersion>
+    <SystemReflectionMetadataVersion>7.0.0-preview.4.22208.8</SystemReflectionMetadataVersion>
+    <SystemResourcesExtensionsVersion>7.0.0-preview.4.22208.8</SystemResourcesExtensionsVersion>
+    <SystemSecurityCryptographyPkcsVersion>7.0.0-preview.4.22208.8</SystemSecurityCryptographyPkcsVersion>
+    <SystemSecurityCryptographyXmlVersion>7.0.0-preview.4.22208.8</SystemSecurityCryptographyXmlVersion>
+    <SystemSecurityPermissionsVersion>7.0.0-preview.4.22208.8</SystemSecurityPermissionsVersion>
+    <SystemServiceProcessServiceControllerVersion>7.0.0-preview.4.22208.8</SystemServiceProcessServiceControllerVersion>
+    <SystemTextEncodingsWebVersion>7.0.0-preview.4.22208.8</SystemTextEncodingsWebVersion>
+    <SystemTextJsonVersion>7.0.0-preview.4.22208.8</SystemTextJsonVersion>
+    <SystemThreadingAccessControlVersion>7.0.0-preview.4.22208.8</SystemThreadingAccessControlVersion>
+    <SystemThreadingChannelsVersion>7.0.0-preview.4.22208.8</SystemThreadingChannelsVersion>
+    <SystemThreadingRateLimitingVersion>7.0.0-preview.4.22208.8</SystemThreadingRateLimitingVersion>
     <!-- Only listed explicitly to workaround https://github.com/dotnet/cli/issues/10528 -->
-    <MicrosoftNETCorePlatformsVersion>7.0.0-alpha.1.21576.4</MicrosoftNETCorePlatformsVersion>
+    <MicrosoftNETCorePlatformsVersion>7.0.0-preview.4.22208.8</MicrosoftNETCorePlatformsVersion>
     <!-- Packages from dotnet/efcore -->
-    <dotnetefVersion>7.0.0-alpha.1.21579.1</dotnetefVersion>
-    <MicrosoftEntityFrameworkCoreInMemoryVersion>7.0.0-alpha.1.21579.1</MicrosoftEntityFrameworkCoreInMemoryVersion>
-    <MicrosoftEntityFrameworkCoreRelationalVersion>7.0.0-alpha.1.21579.1</MicrosoftEntityFrameworkCoreRelationalVersion>
-    <MicrosoftEntityFrameworkCoreSqliteVersion>7.0.0-alpha.1.21579.1</MicrosoftEntityFrameworkCoreSqliteVersion>
-    <MicrosoftEntityFrameworkCoreSqlServerVersion>7.0.0-alpha.1.21579.1</MicrosoftEntityFrameworkCoreSqlServerVersion>
-    <MicrosoftEntityFrameworkCoreToolsVersion>7.0.0-alpha.1.21579.1</MicrosoftEntityFrameworkCoreToolsVersion>
-    <MicrosoftEntityFrameworkCoreVersion>7.0.0-alpha.1.21579.1</MicrosoftEntityFrameworkCoreVersion>
-    <MicrosoftEntityFrameworkCoreDesignVersion>7.0.0-alpha.1.21579.1</MicrosoftEntityFrameworkCoreDesignVersion>
+    <dotnetefVersion>7.0.0-preview.4.22211.2</dotnetefVersion>
+    <MicrosoftEntityFrameworkCoreInMemoryVersion>7.0.0-preview.4.22211.2</MicrosoftEntityFrameworkCoreInMemoryVersion>
+    <MicrosoftEntityFrameworkCoreRelationalVersion>7.0.0-preview.4.22211.2</MicrosoftEntityFrameworkCoreRelationalVersion>
+    <MicrosoftEntityFrameworkCoreSqliteVersion>7.0.0-preview.4.22211.2</MicrosoftEntityFrameworkCoreSqliteVersion>
+    <MicrosoftEntityFrameworkCoreSqlServerVersion>7.0.0-preview.4.22211.2</MicrosoftEntityFrameworkCoreSqlServerVersion>
+    <MicrosoftEntityFrameworkCoreToolsVersion>7.0.0-preview.4.22211.2</MicrosoftEntityFrameworkCoreToolsVersion>
+    <MicrosoftEntityFrameworkCoreVersion>7.0.0-preview.4.22211.2</MicrosoftEntityFrameworkCoreVersion>
+    <MicrosoftEntityFrameworkCoreDesignVersion>7.0.0-preview.4.22211.2</MicrosoftEntityFrameworkCoreDesignVersion>
     <!-- Packages from dotnet/arcade -->
-    <MicrosoftDotNetBuildTasksInstallersVersion>7.0.0-beta.21576.4</MicrosoftDotNetBuildTasksInstallersVersion>
-    <MicrosoftDotNetBuildTasksTemplatingVersion>7.0.0-beta.21576.4</MicrosoftDotNetBuildTasksTemplatingVersion>
+    <MicrosoftDotNetBuildTasksInstallersVersion>7.0.0-beta.22206.10</MicrosoftDotNetBuildTasksInstallersVersion>
+    <MicrosoftDotNetBuildTasksTemplatingVersion>7.0.0-beta.22206.10</MicrosoftDotNetBuildTasksTemplatingVersion>
   </PropertyGroup>
   <!--
 
@@ -173,7 +173,9 @@
     <SystemValueTupleVersion>4.5.0</SystemValueTupleVersion>
     <!-- Packages developed by @aspnet, but manually updated as necessary. -->
     <MicrosoftAspNetWebApiClientVersion>5.2.6</MicrosoftAspNetWebApiClientVersion>
-    <MonoWebAssemblyInteropVersion>3.1.1-preview4.19614.4</MonoWebAssemblyInteropVersion>
+    <MicrosoftAspNetCoreRazorLanguageVersion>6.0.0</MicrosoftAspNetCoreRazorLanguageVersion>
+    <MicrosoftAspNetCoreMvcRazorExtensionsVersion>6.0.0</MicrosoftAspNetCoreMvcRazorExtensionsVersion>
+    <MicrosoftCodeAnalysisRazorVersion>6.0.0</MicrosoftCodeAnalysisRazorVersion>
     <!-- Partner teams -->
     <MicrosoftBclAsyncInterfacesVersion>1.0.0</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftBCLHashCodeVersion>1.1.1</MicrosoftBCLHashCodeVersion>
@@ -195,23 +197,23 @@
     -->
     <Analyzer_MicrosoftCodeAnalysisCSharpVersion>3.3.1</Analyzer_MicrosoftCodeAnalysisCSharpVersion>
     <Analyzer_MicrosoftCodeAnalysisCSharpWorkspacesVersion>3.3.1</Analyzer_MicrosoftCodeAnalysisCSharpWorkspacesVersion>
-    <MicrosoftCodeAnalysisCommonVersion>4.0.0-4.final</MicrosoftCodeAnalysisCommonVersion>
-    <MicrosoftCodeAnalysisCSharpVersion>4.0.0-4.final</MicrosoftCodeAnalysisCSharpVersion>
-    <MicrosoftCodeAnalysisCSharpWorkspacesVersion>4.0.0-4.final</MicrosoftCodeAnalysisCSharpWorkspacesVersion>
+    <MicrosoftCodeAnalysisCommonVersion>4.2.0-2.22128.1</MicrosoftCodeAnalysisCommonVersion>
+    <MicrosoftCodeAnalysisCSharpVersion>4.2.0-2.22128.1</MicrosoftCodeAnalysisCSharpVersion>
+    <MicrosoftCodeAnalysisCSharpWorkspacesVersion>4.2.0-2.22128.1</MicrosoftCodeAnalysisCSharpWorkspacesVersion>
     <MicrosoftCodeAnalysisPublicApiAnalyzersVersion>3.3.0</MicrosoftCodeAnalysisPublicApiAnalyzersVersion>
     <MicrosoftCodeAnalysisCSharpAnalyzerTestingXUnitVersion>1.1.1-beta1.21413.1</MicrosoftCodeAnalysisCSharpAnalyzerTestingXUnitVersion>
     <MicrosoftCodeAnalysisCSharpCodeFixTestingXUnitVersion>1.1.1-beta1.21413.1</MicrosoftCodeAnalysisCSharpCodeFixTestingXUnitVersion>
     <MicrosoftCssParserVersion>1.0.0-20200708.1</MicrosoftCssParserVersion>
-    <MicrosoftIdentityModelLoggingVersion>6.10.0</MicrosoftIdentityModelLoggingVersion>
-    <MicrosoftIdentityModelProtocolsOpenIdConnectVersion>6.10.0</MicrosoftIdentityModelProtocolsOpenIdConnectVersion>
-    <MicrosoftIdentityModelProtocolsWsFederationVersion>6.10.0</MicrosoftIdentityModelProtocolsWsFederationVersion>
+    <MicrosoftIdentityModelLoggingVersion>6.15.1</MicrosoftIdentityModelLoggingVersion>
+    <MicrosoftIdentityModelProtocolsOpenIdConnectVersion>6.15.1</MicrosoftIdentityModelProtocolsOpenIdConnectVersion>
+    <MicrosoftIdentityModelProtocolsWsFederationVersion>6.15.1</MicrosoftIdentityModelProtocolsWsFederationVersion>
     <MicrosoftInternalAspNetCoreH2SpecAllVersion>2.2.1</MicrosoftInternalAspNetCoreH2SpecAllVersion>
     <MicrosoftNETCoreWindowsApiSetsVersion>1.0.1</MicrosoftNETCoreWindowsApiSetsVersion>
     <MicrosoftOwinSecurityCookiesVersion>3.0.1</MicrosoftOwinSecurityCookiesVersion>
     <MicrosoftOwinTestingVersion>3.0.1</MicrosoftOwinTestingVersion>
     <MicrosoftWebAdministrationVersion>11.1.0</MicrosoftWebAdministrationVersion>
     <MicrosoftWebXdtVersion>1.4.0</MicrosoftWebXdtVersion>
-    <SystemIdentityModelTokensJwtVersion>6.10.0</SystemIdentityModelTokensJwtVersion>
+    <SystemIdentityModelTokensJwtVersion>6.15.1</SystemIdentityModelTokensJwtVersion>
     <NuGetPackagingVersion>5.11.0</NuGetPackagingVersion>
     <NuGetVersioningVersion>5.11.0</NuGetVersioningVersion>
     <NuGetFrameworksVersion>5.11.0</NuGetFrameworksVersion>
@@ -221,13 +223,13 @@
     <!-- Packages from 2.1, 3.1, and 5.0 branches used for site extension build. -->
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension21Version>2.1.1</MicrosoftAspNetCoreAzureAppServicesSiteExtension21Version>
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension22Version>2.2.0</MicrosoftAspNetCoreAzureAppServicesSiteExtension22Version>
-    <MicrosoftAspNetCoreAzureAppServicesSiteExtension31Version>3.1.21-servicing-21523-9</MicrosoftAspNetCoreAzureAppServicesSiteExtension31Version>
+    <MicrosoftAspNetCoreAzureAppServicesSiteExtension31Version>3.1.23-servicing-22123-12</MicrosoftAspNetCoreAzureAppServicesSiteExtension31Version>
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension31x64Version>$(MicrosoftAspNetCoreAzureAppServicesSiteExtension31Version)</MicrosoftAspNetCoreAzureAppServicesSiteExtension31x64Version>
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension31x86Version>$(MicrosoftAspNetCoreAzureAppServicesSiteExtension31Version)</MicrosoftAspNetCoreAzureAppServicesSiteExtension31x86Version>
-    <MicrosoftAspNetCoreAzureAppServicesSiteExtension50Version>5.0.12-servicing-21524-1</MicrosoftAspNetCoreAzureAppServicesSiteExtension50Version>
+    <MicrosoftAspNetCoreAzureAppServicesSiteExtension50Version>5.0.15-servicing-22116-16</MicrosoftAspNetCoreAzureAppServicesSiteExtension50Version>
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension50x64Version>$(MicrosoftAspNetCoreAzureAppServicesSiteExtension50Version)</MicrosoftAspNetCoreAzureAppServicesSiteExtension50x64Version>
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension50x86Version>$(MicrosoftAspNetCoreAzureAppServicesSiteExtension50Version)</MicrosoftAspNetCoreAzureAppServicesSiteExtension50x86Version>
-    <MicrosoftAspNetCoreAzureAppServicesSiteExtension60Version>6.0.0-rtm-21526-8</MicrosoftAspNetCoreAzureAppServicesSiteExtension60Version>
+    <MicrosoftAspNetCoreAzureAppServicesSiteExtension60Version>6.0.3-servicing-22124-1</MicrosoftAspNetCoreAzureAppServicesSiteExtension60Version>
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension60x64Version>$(MicrosoftAspNetCoreAzureAppServicesSiteExtension60Version)</MicrosoftAspNetCoreAzureAppServicesSiteExtension60x64Version>
     <MicrosoftAspNetCoreAzureAppServicesSiteExtension60x86Version>$(MicrosoftAspNetCoreAzureAppServicesSiteExtension60Version)</MicrosoftAspNetCoreAzureAppServicesSiteExtension60x86Version>
     <!-- 3rd party dependencies -->
@@ -236,11 +238,13 @@
     <CastleCoreVersion>4.2.1</CastleCoreVersion>
     <CommandLineParserVersion>2.3.0</CommandLineParserVersion>
     <FSharpCoreVersion>6.0.0</FSharpCoreVersion>
-    <GoogleProtobufVersion>3.18.0</GoogleProtobufVersion>
-    <GrpcAspNetCoreVersion>2.40.0</GrpcAspNetCoreVersion>
-    <GrpcAuthVersion>2.40.0</GrpcAuthVersion>
-    <GrpcNetClientVersion>2.40.0</GrpcNetClientVersion>
-    <GrpcToolsVersion>2.40.0</GrpcToolsVersion>
+    <GoogleApiCommonProtosVersion>2.5.0</GoogleApiCommonProtosVersion>
+    <GoogleProtobufVersion>3.18.1</GoogleProtobufVersion>
+    <GrpcAspNetCoreVersion>2.43.0</GrpcAspNetCoreVersion>
+    <GrpcAspNetCoreServerVersion>2.43.0</GrpcAspNetCoreServerVersion>
+    <GrpcAuthVersion>2.43.0</GrpcAuthVersion>
+    <GrpcNetClientVersion>2.43.0</GrpcNetClientVersion>
+    <GrpcToolsVersion>2.43.0</GrpcToolsVersion>
     <DuendeIdentityServerAspNetIdentityVersion>5.2.0</DuendeIdentityServerAspNetIdentityVersion>
     <DuendeIdentityServerEntityFrameworkVersion>5.2.0</DuendeIdentityServerEntityFrameworkVersion>
     <DuendeIdentityServerVersion>5.2.0</DuendeIdentityServerVersion>
@@ -253,16 +257,17 @@
     <MessagePackAnalyzerVersion>$(MessagePackVersion)</MessagePackAnalyzerVersion>
     <MoqVersion>4.10.0</MoqVersion>
     <MonoCecilVersion>0.11.2</MonoCecilVersion>
+    <MonoTextTemplatingVersion>2.2.1</MonoTextTemplatingVersion>
     <NewtonsoftJsonBsonVersion>1.0.2</NewtonsoftJsonBsonVersion>
     <NewtonsoftJsonVersion>13.0.1</NewtonsoftJsonVersion>
     <NSwagApiDescriptionClientVersion>13.0.4</NSwagApiDescriptionClientVersion>
     <PhotinoNETVersion>1.1.6</PhotinoNETVersion>
-    <PlaywrightSharpVersion>0.192.0</PlaywrightSharpVersion>
+    <MicrosoftPlaywrightVersion>1.17.3</MicrosoftPlaywrightVersion>
     <PollyExtensionsHttpVersion>3.0.0</PollyExtensionsHttpVersion>
-    <PollyVersion>7.2.2</PollyVersion>
-    <SeleniumSupportVersion>4.0.1</SeleniumSupportVersion>
-    <SeleniumWebDriverChromeDriverVersion>95.0.4638.5400</SeleniumWebDriverChromeDriverVersion>
-    <SeleniumWebDriverVersion>4.0.1</SeleniumWebDriverVersion>
+    <PollyVersion>7.2.3</PollyVersion>
+    <SeleniumSupportVersion>4.1.0</SeleniumSupportVersion>
+    <SeleniumWebDriverChromeDriverVersion>98.0.4758.10200</SeleniumWebDriverChromeDriverVersion>
+    <SeleniumWebDriverVersion>4.1.0</SeleniumWebDriverVersion>
     <SerilogExtensionsLoggingVersion>1.4.0</SerilogExtensionsLoggingVersion>
     <SerilogSinksFileVersion>4.0.0</SerilogSinksFileVersion>
     <StackExchangeRedisVersion>2.2.4</StackExchangeRedisVersion>
@@ -275,13 +280,13 @@
     <XunitExtensibilityCoreVersion>$(XunitVersion)</XunitExtensibilityCoreVersion>
     <XunitExtensibilityExecutionVersion>$(XunitVersion)</XunitExtensibilityExecutionVersion>
     <XUnitRunnerVisualStudioVersion>2.4.3</XUnitRunnerVisualStudioVersion>
-    <MicrosoftDataSqlClientVersion>1.0.19249.1</MicrosoftDataSqlClientVersion>
+    <MicrosoftDataSqlClientVersion>4.0.1</MicrosoftDataSqlClientVersion>
     <MicrosoftAspNetCoreAppVersion>6.0.0-preview.3.21167.1</MicrosoftAspNetCoreAppVersion>
   </PropertyGroup>
   <!-- Restore feeds -->
   <PropertyGroup Label="Restore feeds">
     <!-- In an orchestrated build, this may be overridden to other Azure feeds. -->
-    <DotNetAssetRootUrl Condition="'$(DotNetAssetRootUrl)'==''">https://dotnetbuilds.blob.core.windows.net/public/</DotNetAssetRootUrl>
+    <DotNetAssetRootUrl Condition="'$(DotNetAssetRootUrl)'==''">https://dotnetbuilds.azureedge.net/public/</DotNetAssetRootUrl>
     <DotNetPrivateAssetRootUrl Condition="'$(DotNetPrivateAssetRootUrl)'==''">https://dotnetclimsrc.blob.core.windows.net/dotnet/</DotNetPrivateAssetRootUrl>
   </PropertyGroup>
 </Project>

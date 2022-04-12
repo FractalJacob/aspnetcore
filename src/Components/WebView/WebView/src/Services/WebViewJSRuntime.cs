@@ -1,13 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Microsoft.JSInterop.Infrastructure;
 
@@ -36,6 +30,11 @@ internal class WebViewJSRuntime : JSRuntime
 
     protected override void BeginInvokeJS(long taskId, string identifier, string argsJson, JSCallResultType resultType, long targetInstanceId)
     {
+        if (_ipcSender is null)
+        {
+            throw new InvalidOperationException("Cannot invoke JavaScript outside of a WebView context.");
+        }
+
         _ipcSender.BeginInvokeJS(taskId, identifier, argsJson, resultType, targetInstanceId);
     }
 

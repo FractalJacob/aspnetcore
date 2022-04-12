@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,7 +19,7 @@ public class FileContentResultTest : FileContentResultTestBase
         EntityTagHeaderValue entityTag = null,
         bool enableRangeProcessing = false)
     {
-        var result = new FileContentResult(buffer, contentType)
+        var result = new FileContentHttpResult(buffer, contentType)
         {
             EntityTag = entityTag,
             LastModified = lastModified,
@@ -30,6 +28,7 @@ public class FileContentResultTest : FileContentResultTestBase
 
         httpContext.RequestServices = new ServiceCollection()
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
+            .AddSingleton<ILoggerFactory, NullLoggerFactory>()
             .BuildServiceProvider();
 
         return result.ExecuteAsync(httpContext);

@@ -1,10 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -258,8 +255,6 @@ internal class ApiResponseTypeProvider
                 }
             }
 
-
-
             if (!isSupportedContentType && contentType != null)
             {
                 // No output formatter was found that supports this content type. Add the user specified content type as-is to the result.
@@ -289,9 +284,10 @@ internal class ApiResponseTypeProvider
             unwrappedType = declaredReturnType.GetGenericArguments()[0];
         }
 
-        // If the method is declared to return IActionResult or a derived class, that information
+        // If the method is declared to return IActionResult, IResult or a derived class, that information
         // isn't valuable to the formatter.
-        if (typeof(IActionResult).IsAssignableFrom(unwrappedType))
+        if (typeof(IActionResult).IsAssignableFrom(unwrappedType) ||
+            typeof(IResult).IsAssignableFrom(unwrappedType))
         {
             return null;
         }
@@ -302,7 +298,7 @@ internal class ApiResponseTypeProvider
         return unwrappedType;
     }
 
-    private Type? GetRuntimeReturnType(Type? declaredReturnType)
+    private static Type? GetRuntimeReturnType(Type? declaredReturnType)
     {
         // If we get here, then a filter didn't give us an answer, so we need to figure out if we
         // want to use the declared return type.

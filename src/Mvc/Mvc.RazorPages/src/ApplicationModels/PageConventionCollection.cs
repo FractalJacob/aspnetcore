@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
@@ -289,12 +287,12 @@ public class PageConventionCollection : Collection<IPageConvention>
     {
         if (string.IsNullOrEmpty(pageName))
         {
-            throw new ArgumentException(Resources.ArgumentCannotBeNullOrEmpty, nameof(pageName));
+            throw new ArgumentException(Resources.ArgumentCannotBeNullOrEmpty, argumentName);
         }
 
         if (pageName[0] != '/' || pageName.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException(Resources.FormatInvalidValidPageName(pageName), nameof(pageName));
+            throw new ArgumentException(Resources.FormatInvalidValidPageName(pageName), argumentName);
         }
     }
 

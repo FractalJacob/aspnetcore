@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -148,7 +147,7 @@ internal static class HandshakeHelpers
                 }
 
                 hasClientMaxWindowBits = true;
-                if (!ParseWindowBits(value, WebSocketDeflateConstants.ClientMaxWindowBits, out var clientMaxWindowBits))
+                if (!ParseWindowBits(value, out var clientMaxWindowBits))
                 {
                     return false;
                 }
@@ -193,7 +192,7 @@ internal static class HandshakeHelpers
                 }
 
                 hasServerMaxWindowBits = true;
-                if (!ParseWindowBits(value, WebSocketDeflateConstants.ServerMaxWindowBits, out var parsedServerMaxWindowBits))
+                if (!ParseWindowBits(value, out var parsedServerMaxWindowBits))
                 {
                     return false;
                 }
@@ -212,7 +211,7 @@ internal static class HandshakeHelpers
                 parsedOptions.ServerMaxWindowBits = Math.Min(parsedServerMaxWindowBits ?? 15, serverMaxWindowBits);
             }
 
-            static bool ParseWindowBits(ReadOnlySpan<char> value, string propertyName, out int? parsedValue)
+            static bool ParseWindowBits(ReadOnlySpan<char> value, out int? parsedValue)
             {
                 var startIndex = value.IndexOf('=');
 

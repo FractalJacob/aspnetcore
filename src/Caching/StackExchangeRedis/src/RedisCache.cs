@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -16,6 +18,14 @@ namespace Microsoft.Extensions.Caching.StackExchangeRedis;
 /// </summary>
 public class RedisCache : IDistributedCache, IDisposable
 {
+    // -- Explanation of why two kinds of SetScript are used --
+    // * Redis 2.0 had HSET key field value for setting individual hash fields,
+    // and HMSET key field value [field value ...] for setting multiple hash fields (against the same key).
+    // * Redis 4.0 added HSET key field value [field value ...] and deprecated HMSET.
+    //
+    // On Redis versions that don't have the newer HSET variant, we use SetScriptPreExtendedSetCommand
+    // which uses the (now deprecated) HMSET.
+
     // KEYS[1] = = key
     // ARGV[1] = absolute-expiration - ticks as long (-1 for none)
     // ARGV[2] = sliding-expiration - ticks as long (-1 for none)
@@ -28,14 +38,23 @@ public class RedisCache : IDistributedCache, IDisposable
                   redis.call('EXPIRE', KEYS[1], ARGV[3])
                 end
                 return 1");
+    private const string SetScriptPreExtendedSetCommand = (@"
+                redis.call('HMSET', KEYS[1], 'absexp', ARGV[1], 'sldexp', ARGV[2], 'data', ARGV[4])
+                if ARGV[3] ~= '-1' then
+                  redis.call('EXPIRE', KEYS[1], ARGV[3])
+                end
+                return 1");
+
     private const string AbsoluteExpirationKey = "absexp";
     private const string SlidingExpirationKey = "sldexp";
     private const string DataKey = "data";
     private const long NotPresent = -1;
+    private static readonly Version ServerVersionWithExtendedSetCommand = new Version(4, 0, 0);
 
-    private volatile IConnectionMultiplexer _connection;
-    private IDatabase _cache;
+    private volatile IConnectionMultiplexer? _connection;
+    private IDatabase? _cache;
     private bool _disposed;
+    private string _setScript = SetScript;
 
     private readonly RedisCacheOptions _options;
     private readonly string _instance;
@@ -60,7 +79,7 @@ public class RedisCache : IDistributedCache, IDisposable
     }
 
     /// <inheritdoc />
-    public byte[] Get(string key)
+    public byte[]? Get(string key)
     {
         if (key == null)
         {
@@ -71,7 +90,7 @@ public class RedisCache : IDistributedCache, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task<byte[]> GetAsync(string key, CancellationToken token = default(CancellationToken))
+    public async Task<byte[]?> GetAsync(string key, CancellationToken token = default(CancellationToken))
     {
         if (key == null)
         {
@@ -107,7 +126,7 @@ public class RedisCache : IDistributedCache, IDisposable
 
         var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
 
-        var result = _cache.ScriptEvaluate(SetScript, new RedisKey[] { _instance + key },
+        _cache.ScriptEvaluate(_setScript, new RedisKey[] { _instance + key },
             new RedisValue[]
             {
                         absoluteExpiration?.Ticks ?? NotPresent,
@@ -138,18 +157,19 @@ public class RedisCache : IDistributedCache, IDisposable
         token.ThrowIfCancellationRequested();
 
         await ConnectAsync(token).ConfigureAwait(false);
+        Debug.Assert(_cache is not null);
 
         var creationTime = DateTimeOffset.UtcNow;
 
         var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
 
-        await _cache.ScriptEvaluateAsync(SetScript, new RedisKey[] { _instance + key },
+        await _cache.ScriptEvaluateAsync(_setScript, new RedisKey[] { _instance + key },
             new RedisValue[]
             {
-                        absoluteExpiration?.Ticks ?? NotPresent,
-                        options.SlidingExpiration?.Ticks ?? NotPresent,
-                        GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent,
-                        value
+                absoluteExpiration?.Ticks ?? NotPresent,
+                options.SlidingExpiration?.Ticks ?? NotPresent,
+                GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent,
+                value
             }).ConfigureAwait(false);
     }
 
@@ -177,11 +197,13 @@ public class RedisCache : IDistributedCache, IDisposable
         await GetAndRefreshAsync(key, getData: false, token: token).ConfigureAwait(false);
     }
 
+    [MemberNotNull(nameof(_cache), nameof(_connection))]
     private void Connect()
     {
         CheckDisposed();
         if (_cache != null)
         {
+            Debug.Assert(_connection != null);
             return;
         }
 
@@ -206,7 +228,7 @@ public class RedisCache : IDistributedCache, IDisposable
                     _connection = _options.ConnectionMultiplexerFactory().GetAwaiter().GetResult();
                 }
 
-                TryRegisterProfiler();
+                PrepareConnection();
                 _cache = _connection.GetDatabase();
             }
         }
@@ -214,6 +236,8 @@ public class RedisCache : IDistributedCache, IDisposable
         {
             _connectionLock.Release();
         }
+
+        Debug.Assert(_connection != null);
     }
 
     private async Task ConnectAsync(CancellationToken token = default(CancellationToken))
@@ -223,6 +247,7 @@ public class RedisCache : IDistributedCache, IDisposable
 
         if (_cache != null)
         {
+            Debug.Assert(_connection != null);
             return;
         }
 
@@ -244,10 +269,10 @@ public class RedisCache : IDistributedCache, IDisposable
                 }
                 else
                 {
-                    _connection = await _options.ConnectionMultiplexerFactory();
+                    _connection = await _options.ConnectionMultiplexerFactory().ConfigureAwait(false);
                 }
 
-                TryRegisterProfiler();
+                PrepareConnection();
                 _cache = _connection.GetDatabase();
             }
         }
@@ -257,15 +282,37 @@ public class RedisCache : IDistributedCache, IDisposable
         }
     }
 
+    private void PrepareConnection()
+    {
+        ValidateServerFeatures();
+        TryRegisterProfiler();
+    }
+
+    private void ValidateServerFeatures()
+    {
+        _ = _connection ?? throw new InvalidOperationException($"{nameof(_connection)} cannot be null.");
+
+        foreach (var endPoint in _connection.GetEndPoints())
+        {
+            if (_connection.GetServer(endPoint).Version < ServerVersionWithExtendedSetCommand)
+            {
+                _setScript = SetScriptPreExtendedSetCommand;
+                return;
+            }
+        }
+    }
+
     private void TryRegisterProfiler()
     {
-        if (_connection != null && _options.ProfilingSession != null)
+        _ = _connection ?? throw new InvalidOperationException($"{nameof(_connection)} cannot be null.");
+
+        if (_options.ProfilingSession != null)
         {
             _connection.RegisterProfiler(_options.ProfilingSession);
         }
     }
 
-    private byte[] GetAndRefresh(string key, bool getData)
+    private byte[]? GetAndRefresh(string key, bool getData)
     {
         if (key == null)
         {
@@ -290,7 +337,7 @@ public class RedisCache : IDistributedCache, IDisposable
         if (results.Length >= 2)
         {
             MapMetadata(results, out DateTimeOffset? absExpr, out TimeSpan? sldExpr);
-            Refresh(key, absExpr, sldExpr);
+            Refresh(_cache, key, absExpr, sldExpr);
         }
 
         if (results.Length >= 3 && results[2].HasValue)
@@ -301,7 +348,7 @@ public class RedisCache : IDistributedCache, IDisposable
         return null;
     }
 
-    private async Task<byte[]> GetAndRefreshAsync(string key, bool getData, CancellationToken token = default(CancellationToken))
+    private async Task<byte[]?> GetAndRefreshAsync(string key, bool getData, CancellationToken token = default(CancellationToken))
     {
         if (key == null)
         {
@@ -311,6 +358,7 @@ public class RedisCache : IDistributedCache, IDisposable
         token.ThrowIfCancellationRequested();
 
         await ConnectAsync(token).ConfigureAwait(false);
+        Debug.Assert(_cache is not null);
 
         // This also resets the LRU status as desired.
         // TODO: Can this be done in one operation on the server side? Probably, the trick would just be the DateTimeOffset math.
@@ -328,7 +376,7 @@ public class RedisCache : IDistributedCache, IDisposable
         if (results.Length >= 2)
         {
             MapMetadata(results, out DateTimeOffset? absExpr, out TimeSpan? sldExpr);
-            await RefreshAsync(key, absExpr, sldExpr, token).ConfigureAwait(false);
+            await RefreshAsync(_cache, key, absExpr, sldExpr, token).ConfigureAwait(false);
         }
 
         if (results.Length >= 3 && results[2].HasValue)
@@ -362,12 +410,13 @@ public class RedisCache : IDistributedCache, IDisposable
         }
 
         await ConnectAsync(token).ConfigureAwait(false);
+        Debug.Assert(_cache is not null);
 
         await _cache.KeyDeleteAsync(_instance + key).ConfigureAwait(false);
         // TODO: Error handling
     }
 
-    private void MapMetadata(RedisValue[] results, out DateTimeOffset? absoluteExpiration, out TimeSpan? slidingExpiration)
+    private static void MapMetadata(RedisValue[] results, out DateTimeOffset? absoluteExpiration, out TimeSpan? slidingExpiration)
     {
         absoluteExpiration = null;
         slidingExpiration = null;
@@ -383,7 +432,7 @@ public class RedisCache : IDistributedCache, IDisposable
         }
     }
 
-    private void Refresh(string key, DateTimeOffset? absExpr, TimeSpan? sldExpr)
+    private void Refresh(IDatabase cache, string key, DateTimeOffset? absExpr, TimeSpan? sldExpr)
     {
         if (key == null)
         {
@@ -391,9 +440,9 @@ public class RedisCache : IDistributedCache, IDisposable
         }
 
         // Note Refresh has no effect if there is just an absolute expiration (or neither).
-        TimeSpan? expr = null;
         if (sldExpr.HasValue)
         {
+            TimeSpan? expr;
             if (absExpr.HasValue)
             {
                 var relExpr = absExpr.Value - DateTimeOffset.Now;
@@ -403,12 +452,12 @@ public class RedisCache : IDistributedCache, IDisposable
             {
                 expr = sldExpr;
             }
-            _cache.KeyExpire(_instance + key, expr);
+            cache.KeyExpire(_instance + key, expr);
             // TODO: Error handling
         }
     }
 
-    private async Task RefreshAsync(string key, DateTimeOffset? absExpr, TimeSpan? sldExpr, CancellationToken token = default(CancellationToken))
+    private async Task RefreshAsync(IDatabase cache, string key, DateTimeOffset? absExpr, TimeSpan? sldExpr, CancellationToken token = default(CancellationToken))
     {
         if (key == null)
         {
@@ -418,9 +467,9 @@ public class RedisCache : IDistributedCache, IDisposable
         token.ThrowIfCancellationRequested();
 
         // Note Refresh has no effect if there is just an absolute expiration (or neither).
-        TimeSpan? expr = null;
         if (sldExpr.HasValue)
         {
+            TimeSpan? expr;
             if (absExpr.HasValue)
             {
                 var relExpr = absExpr.Value - DateTimeOffset.Now;
@@ -430,7 +479,7 @@ public class RedisCache : IDistributedCache, IDisposable
             {
                 expr = sldExpr;
             }
-            await _cache.KeyExpireAsync(_instance + key, expr).ConfigureAwait(false);
+            await cache.KeyExpireAsync(_instance + key, expr).ConfigureAwait(false);
             // TODO: Error handling
         }
     }

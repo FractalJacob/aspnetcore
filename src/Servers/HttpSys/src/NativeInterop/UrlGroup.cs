@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.HttpSys.Internal;
@@ -31,24 +30,6 @@ internal partial class UrlGroup : IDisposable
         _created = true;
         var statusCode = HttpApi.HttpCreateUrlGroup(
             _serverSession.Id.DangerousGetServerSessionId(), &urlGroupId, 0);
-
-        if (statusCode != UnsafeNclNativeMethods.ErrorCodes.ERROR_SUCCESS)
-        {
-            throw new HttpSysException((int)statusCode);
-        }
-
-        Debug.Assert(urlGroupId != 0, "Invalid id returned by HttpCreateUrlGroup");
-        Id = urlGroupId;
-    }
-
-    internal unsafe UrlGroup(RequestQueue requestQueue, UrlPrefix url, ILogger logger)
-    {
-        _logger = logger;
-
-        ulong urlGroupId = 0;
-        _created = false;
-        var statusCode = HttpApi.HttpFindUrlGroupId(
-            url.FullPrefix, requestQueue.Handle, &urlGroupId);
 
         if (statusCode != UnsafeNclNativeMethods.ErrorCodes.ERROR_SUCCESS)
         {
@@ -132,7 +113,7 @@ internal partial class UrlGroup : IDisposable
 
     internal bool UnregisterPrefix(string uriPrefix)
     {
-        Log.UnregisteringPrefix(_logger, "Stop listening on prefix: {0}");
+        Log.UnregisteringPrefix(_logger, uriPrefix);
         CheckDisposed();
 
         var statusCode = HttpApi.HttpRemoveUrlFromUrlGroup(Id, uriPrefix, 0);

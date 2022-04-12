@@ -1,10 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
@@ -179,7 +176,7 @@ public static class TagHelperOutputExtensions
 
         var encodedSpaceChars = SpaceChars.Where(x => !x.Equals('\u0020')).Select(x => htmlEncoder.Encode(x.ToString())).ToArray();
 
-        if (SpaceChars.Any(classValue.Contains) || encodedSpaceChars.Any(value => classValue.IndexOf(value, StringComparison.Ordinal) >= 0))
+        if (SpaceChars.Any(classValue.Contains) || encodedSpaceChars.Any(value => classValue.Contains(value, StringComparison.Ordinal)))
         {
             throw new ArgumentException(Resources.ArgumentCannotContainHtmlSpace, nameof(classValue));
         }
@@ -236,7 +233,7 @@ public static class TagHelperOutputExtensions
 
         var encodedSpaceChars = SpaceChars.Where(x => !x.Equals('\u0020')).Select(x => htmlEncoder.Encode(x.ToString())).ToArray();
 
-        if (SpaceChars.Any(classValue.Contains) || encodedSpaceChars.Any(value => classValue.IndexOf(value, StringComparison.Ordinal) >= 0))
+        if (SpaceChars.Any(classValue.Contains) || encodedSpaceChars.Any(value => classValue.Contains(value, StringComparison.Ordinal)))
         {
             throw new ArgumentException(Resources.ArgumentCannotContainHtmlSpace, nameof(classValue));
         }

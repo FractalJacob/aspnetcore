@@ -41,7 +41,7 @@ internal class BlobAppendReferenceWrapper : ICloudAppendBlob
             return _client.SendAsync(message, cancellationToken);
         }
 
-        var response = await AppendDataAsync();
+        var response = await AppendDataAsync().ConfigureAwait(false);
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
@@ -58,14 +58,14 @@ internal class BlobAppendReferenceWrapper : ICloudAppendBlob
 
             AddCommonHeaders(message);
 
-            response = await _client.SendAsync(message, cancellationToken);
+            response = await _client.SendAsync(message, cancellationToken).ConfigureAwait(false);
 
             // If result is 2** or 412 try to append again
             if (response.IsSuccessStatusCode ||
                 response.StatusCode == HttpStatusCode.PreconditionFailed)
             {
                 // Retry sending data after blob creation
-                response = await AppendDataAsync();
+                response = await AppendDataAsync().ConfigureAwait(false);
             }
         }
 
@@ -88,12 +88,16 @@ internal class BlobAppendReferenceWrapper : ICloudAppendBlob
         // and set the property with the combined string.
         var queryToAppend = "comp=appendblock";
         if (uriBuilder.Query != null && uriBuilder.Query.Length > 1)
+        {
 #if NETFRAMEWORK || NETSTANDARD
             uriBuilder.Query = uriBuilder.Query.Substring(1) + "&" + queryToAppend;
 #else
             uriBuilder.Query = string.Concat(uriBuilder.Query.AsSpan(1), "&", queryToAppend);
 #endif
+        }
         else
+        {
             uriBuilder.Query = queryToAppend;
+        }
     }
 }

@@ -1,12 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Http.Result;
 
@@ -20,7 +16,7 @@ public class AcceptedResultTests
         var stream = new MemoryStream();
         httpContext.Response.Body = stream;
         // Act
-        var result = new AcceptedResult("my-location", value: "Hello world");
+        var result = new AcceptedHttpResult("my-location", value: "Hello world");
         await result.ExecuteAsync(httpContext);
 
         // Assert
@@ -36,12 +32,26 @@ public class AcceptedResultTests
         var httpContext = GetHttpContext();
 
         // Act
-        var result = new AcceptedResult(expectedUrl, value: "some-value");
+        var result = new AcceptedHttpResult(expectedUrl, value: "some-value");
         await result.ExecuteAsync(httpContext);
 
         // Assert
         Assert.Equal(StatusCodes.Status202Accepted, httpContext.Response.StatusCode);
         Assert.Equal(expectedUrl, httpContext.Response.Headers["Location"]);
+    }
+
+    [Fact]
+    public void AcceptedResult_ProblemDetails_SetsStatusCodeAndValue()
+    {
+        // Arrange & Act
+        var expectedUrl = "testAction";
+        var obj = new HttpValidationProblemDetails();
+        var result = new AcceptedHttpResult(expectedUrl, obj);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status202Accepted, result.StatusCode);
+        Assert.Equal(StatusCodes.Status202Accepted, obj.Status);
+        Assert.Equal(obj, result.Value);
     }
 
     private static HttpContext GetHttpContext()

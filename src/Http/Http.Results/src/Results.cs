@@ -1,13 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.IO.Pipelines;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Http.Result;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 
@@ -33,7 +32,7 @@ public static class Results
     public static IResult Challenge(
         AuthenticationProperties? properties = null,
         IList<string>? authenticationSchemes = null)
-        => new ChallengeResult { AuthenticationSchemes = authenticationSchemes ?? Array.Empty<string>(), Properties = properties };
+        => new ChallengeHttpResult(authenticationSchemes: authenticationSchemes ?? Array.Empty<string>(), properties);
 
     /// <summary>
     /// Creates a <see cref="IResult"/> that on execution invokes <see cref="AuthenticationHttpContextExtensions.ForbidAsync(HttpContext, string?, AuthenticationProperties?)"/>.
@@ -51,7 +50,7 @@ public static class Results
     /// a redirect to show a login page.
     /// </remarks>
     public static IResult Forbid(AuthenticationProperties? properties = null, IList<string>? authenticationSchemes = null)
-        => new ForbidResult { Properties = properties, AuthenticationSchemes = authenticationSchemes ?? Array.Empty<string>(), };
+        => new ForbidHttpResult(authenticationSchemes: authenticationSchemes ?? Array.Empty<string>(), properties);
 
     /// <summary>
     /// Creates an <see cref="IResult"/> that on execution invokes <see cref="AuthenticationHttpContextExtensions.SignInAsync(HttpContext, string?, ClaimsPrincipal, AuthenticationProperties?)" />.
@@ -64,7 +63,7 @@ public static class Results
         ClaimsPrincipal principal,
         AuthenticationProperties? properties = null,
         string? authenticationScheme = null)
-        => new SignInResult(authenticationScheme, principal, properties);
+        => new SignInHttpResult(principal, authenticationScheme, properties);
 
     /// <summary>
     /// Creates an <see cref="IResult"/> that on execution invokes <see cref="AuthenticationHttpContextExtensions.SignOutAsync(HttpContext, string?, AuthenticationProperties?)" />.
@@ -73,7 +72,7 @@ public static class Results
     /// <param name="authenticationSchemes">The authentication scheme to use for the sign-out operation.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult SignOut(AuthenticationProperties? properties = null, IList<string>? authenticationSchemes = null)
-        => new SignOutResult(authenticationSchemes ?? Array.Empty<string>(), properties);
+        => new SignOutHttpResult(authenticationSchemes ?? Array.Empty<string>(), properties);
 
     /// <summary>
     /// Writes the <paramref name="content"/> string to the HTTP response.
@@ -115,11 +114,7 @@ public static class Results
             mediaTypeHeaderValue.Encoding = contentEncoding ?? mediaTypeHeaderValue.Encoding;
         }
 
-        return new ContentResult
-        {
-            Content = content,
-            ContentType = mediaTypeHeaderValue?.ToString()
-        };
+        return new ContentHttpResult(content, mediaTypeHeaderValue?.ToString());
     }
 
     /// <summary>
@@ -129,11 +124,7 @@ public static class Results
     /// <param name="contentType">The content type (MIME type).</param>
     /// <returns>The created <see cref="IResult"/> object for the response.</returns>
     public static IResult Content(string content, MediaTypeHeaderValue contentType)
-        => new ContentResult
-        {
-            Content = content,
-            ContentType = contentType.ToString()
-        };
+        => new ContentHttpResult(content, contentType.ToString());
 
     /// <summary>
     /// Creates a <see cref="IResult"/> that serializes the specified <paramref name="data"/> object to JSON.
@@ -142,17 +133,14 @@ public static class Results
     /// <param name="options">The serializer options to use when serializing the value.</param>
     /// <param name="contentType">The content-type to set on the response.</param>
     /// <param name="statusCode">The status code to set on the response.</param>
-    /// <returns>The created <see cref="JsonResult"/> that serializes the specified <paramref name="data"/>
+    /// <returns>The created <see cref="JsonHttpResult"/> that serializes the specified <paramref name="data"/>
     /// as JSON format for the response.</returns>
     /// <remarks>Callers should cache an instance of serializer settings to avoid
     /// recreating cached data with each call.</remarks>
     public static IResult Json(object? data, JsonSerializerOptions? options = null, string? contentType = null, int? statusCode = null)
-        => new JsonResult
+        => new JsonHttpResult(data, statusCode, options)
         {
-            Value = data,
-            JsonSerializerOptions = options,
             ContentType = contentType,
-            StatusCode = statusCode,
         };
 
     /// <summary>
@@ -165,11 +153,11 @@ public static class Results
     /// This API is an alias for <see cref="Bytes(byte[], string, string?, bool, DateTimeOffset?, EntityTagHeaderValue?)"/>.</para>
     /// </summary>
     /// <param name="fileContents">The file contents.</param>
-    /// <param name="contentType">The Content-Type of the file.</param>
-    /// <param name="fileDownloadName">The suggested file name.</param>
-    /// <param name="enableRangeProcessing">Set to <c>true</c> to enable range requests processing.</param>
-    /// <param name="lastModified">The <see cref="DateTimeOffset"/> of when the file was last modified.</param>
-    /// <param name="entityTag">The <see cref="EntityTagHeaderValue"/> associated with the file.</param>
+        /// <param name="contentType">The Content-Type of the file.</param>
+        /// <param name="fileDownloadName">The suggested file name.</param>
+        /// <param name="enableRangeProcessing">Set to <c>true</c> to enable range requests processing.</param>
+        /// <param name="lastModified">The <see cref="DateTimeOffset"/> of when the file was last modified.</param>
+        /// <param name="entityTag">The <see cref="EntityTagHeaderValue"/> associated with the file.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
 #pragma warning disable RS0026 // Do not add multiple public overloads with optional parameters
     public static IResult File(
@@ -180,7 +168,7 @@ public static class Results
         bool enableRangeProcessing = false,
         DateTimeOffset? lastModified = null,
         EntityTagHeaderValue? entityTag = null)
-        => new FileContentResult(fileContents, contentType)
+        => new FileContentHttpResult(fileContents, contentType)
         {
             FileDownloadName = fileDownloadName,
             EnableRangeProcessing = enableRangeProcessing,
@@ -211,7 +199,7 @@ public static class Results
         bool enableRangeProcessing = false,
         DateTimeOffset? lastModified = null,
         EntityTagHeaderValue? entityTag = null)
-        => new FileContentResult(contents, contentType)
+        => new FileContentHttpResult(contents, contentType)
         {
             FileDownloadName = fileDownloadName,
             EnableRangeProcessing = enableRangeProcessing,
@@ -219,9 +207,39 @@ public static class Results
             EntityTag = entityTag,
         };
 
+    /// <summary>
+    /// Writes the byte-array content to the response.
+    /// <para>
+    /// This supports range requests (<see cref="StatusCodes.Status206PartialContent"/> or
+    /// <see cref="StatusCodes.Status416RangeNotSatisfiable"/> if the range is not satisfiable).
+    /// </para>
+    /// </summary>
+    /// <param name="contents">The file contents.</param>
+    /// <param name="contentType">The Content-Type of the file.</param>
+    /// <param name="fileDownloadName">The suggested file name.</param>
+    /// <param name="enableRangeProcessing">Set to <c>true</c> to enable range requests processing.</param>
+    /// <param name="lastModified">The <see cref="DateTimeOffset"/> of when the file was last modified.</param>
+    /// <param name="entityTag">The <see cref="EntityTagHeaderValue"/> associated with the file.</param>
+    /// <returns>The created <see cref="IResult"/> for the response.</returns>
+#pragma warning disable RS0026 // Do not add multiple public overloads with optional parameters
+    public static IResult Bytes(
+#pragma warning restore RS0026 // Do not add multiple public overloads with optional parameters
+        ReadOnlyMemory<byte> contents,
+        string? contentType = null,
+        string? fileDownloadName = null,
+        bool enableRangeProcessing = false,
+        DateTimeOffset? lastModified = null,
+        EntityTagHeaderValue? entityTag = null)
+        => new FileContentHttpResult(contents, contentType)
+        {
+            FileDownloadName = fileDownloadName,
+            EnableRangeProcessing = enableRangeProcessing,
+            LastModified = lastModified,
+            EntityTag = entityTag,
+        };
 
     /// <summary>
-    /// Writes the specified <see cref="Stream"/> to the response.
+    /// Writes the specified <see cref="System.IO.Stream"/> to the response.
     /// <para>
     /// This supports range requests (<see cref="StatusCodes.Status206PartialContent"/> or
     /// <see cref="StatusCodes.Status416RangeNotSatisfiable"/> if the range is not satisfiable).
@@ -230,7 +248,7 @@ public static class Results
     /// This API is an alias for <see cref="Stream(Stream, string, string?, DateTimeOffset?, EntityTagHeaderValue?, bool)"/>.
     /// </para>
     /// </summary>
-    /// <param name="fileStream">The <see cref="Stream"/> with the contents of the file.</param>
+    /// <param name="fileStream">The <see cref="System.IO.Stream"/> with the contents of the file.</param>
     /// <param name="contentType">The Content-Type of the file.</param>
     /// <param name="fileDownloadName">The the file name to be used in the <c>Content-Disposition</c> header.</param>
     /// <param name="lastModified">The <see cref="DateTimeOffset"/> of when the file was last modified.
@@ -252,7 +270,7 @@ public static class Results
         EntityTagHeaderValue? entityTag = null,
         bool enableRangeProcessing = false)
     {
-        return new FileStreamResult(fileStream, contentType)
+        return new FileStreamHttpResult(fileStream, contentType)
         {
             LastModified = lastModified,
             EntityTag = entityTag,
@@ -262,7 +280,7 @@ public static class Results
     }
 
     /// <summary>
-    /// Writes the specified <see cref="Stream"/> to the response.
+    /// Writes the specified <see cref="System.IO.Stream"/> to the response.
     /// <para>
     /// This supports range requests (<see cref="StatusCodes.Status206PartialContent"/> or
     /// <see cref="StatusCodes.Status416RangeNotSatisfiable"/> if the range is not satisfiable).
@@ -271,7 +289,7 @@ public static class Results
     /// This API is an alias for <see cref="File(Stream, string, string?, DateTimeOffset?, EntityTagHeaderValue?, bool)"/>.
     /// </para>
     /// </summary>
-    /// <param name="stream">The <see cref="Stream"/> to write to the response.</param>
+    /// <param name="stream">The <see cref="System.IO.Stream"/> to write to the response.</param>
     /// <param name="contentType">The <c>Content-Type</c> of the response. Defaults to <c>application/octet-stream</c>.</param>
     /// <param name="fileDownloadName">The the file name to be used in the <c>Content-Disposition</c> header.</param>
     /// <param name="lastModified">The <see cref="DateTimeOffset"/> of when the file was last modified.
@@ -291,12 +309,82 @@ public static class Results
         EntityTagHeaderValue? entityTag = null,
         bool enableRangeProcessing = false)
     {
-        return new FileStreamResult(stream, contentType)
+        return new FileStreamHttpResult(stream, contentType)
         {
             LastModified = lastModified,
             EntityTag = entityTag,
             FileDownloadName = fileDownloadName,
             EnableRangeProcessing = enableRangeProcessing,
+        };
+    }
+
+    /// <summary>
+    /// Writes the contents of specified <see cref="System.IO.Pipelines.PipeReader"/> to the response.
+    /// <para>
+    /// This supports range requests (<see cref="StatusCodes.Status206PartialContent"/> or
+    /// <see cref="StatusCodes.Status416RangeNotSatisfiable"/> if the range is not satisfiable).
+    /// </para>
+    /// </summary>
+    /// <param name="pipeReader">The <see cref="System.IO.Pipelines.PipeReader"/> to write to the response.</param>
+    /// <param name="contentType">The <c>Content-Type</c> of the response. Defaults to <c>application/octet-stream</c>.</param>
+    /// <param name="fileDownloadName">The the file name to be used in the <c>Content-Disposition</c> header.</param>
+    /// <param name="lastModified">The <see cref="DateTimeOffset"/> of when the file was last modified.
+    /// Used to configure the <c>Last-Modified</c> response header and perform conditional range requests.</param>
+    /// <param name="entityTag">The <see cref="EntityTagHeaderValue"/> to be configure the <c>ETag</c> response header
+    /// and perform conditional requests.</param>
+    /// <param name="enableRangeProcessing">Set to <c>true</c> to enable range requests processing.</param>
+    /// <returns>The created <see cref="IResult"/> for the response.</returns>
+    /// <remarks>
+    /// The <paramref name="pipeReader" /> parameter is completed after the response is sent.
+    /// </remarks>
+#pragma warning disable RS0026 // Do not add multiple public overloads with optional parameters
+    public static IResult Stream(
+#pragma warning restore RS0026 // Do not add multiple public overloads with optional parameters
+        PipeReader pipeReader,
+        string? contentType = null,
+        string? fileDownloadName = null,
+        DateTimeOffset? lastModified = null,
+        EntityTagHeaderValue? entityTag = null,
+        bool enableRangeProcessing = false)
+    {
+        return new FileStreamHttpResult(pipeReader.AsStream(), contentType)
+        {
+            LastModified = lastModified,
+            EntityTag = entityTag,
+            FileDownloadName = fileDownloadName,
+            EnableRangeProcessing = enableRangeProcessing,
+        };
+    }
+
+    /// <summary>
+    /// Allows writing directly to the response body.
+    /// <para>
+    /// This supports range requests (<see cref="StatusCodes.Status206PartialContent"/> or
+    /// <see cref="StatusCodes.Status416RangeNotSatisfiable"/> if the range is not satisfiable).
+    /// </para>
+    /// </summary>
+    /// <param name="streamWriterCallback">The callback that allows users to write directly to the response body.</param>
+    /// <param name="contentType">The <c>Content-Type</c> of the response. Defaults to <c>application/octet-stream</c>.</param>
+    /// <param name="fileDownloadName">The the file name to be used in the <c>Content-Disposition</c> header.</param>
+    /// <param name="lastModified">The <see cref="DateTimeOffset"/> of when the file was last modified.
+    /// Used to configure the <c>Last-Modified</c> response header and perform conditional range requests.</param>
+    /// <param name="entityTag">The <see cref="EntityTagHeaderValue"/> to be configure the <c>ETag</c> response header
+    /// and perform conditional requests.</param>
+    /// <returns>The created <see cref="IResult"/> for the response.</returns>
+#pragma warning disable RS0026 // Do not add multiple public overloads with optional parameters
+    public static IResult Stream(
+#pragma warning restore RS0026 // Do not add multiple public overloads with optional parameters
+        Func<Stream, Task> streamWriterCallback,
+        string? contentType = null,
+        string? fileDownloadName = null,
+        DateTimeOffset? lastModified = null,
+        EntityTagHeaderValue? entityTag = null)
+    {
+        return new PushStreamHttpResult(streamWriterCallback, contentType)
+        {
+            LastModified = lastModified,
+            EntityTag = entityTag,
+            FileDownloadName = fileDownloadName,
         };
     }
 
@@ -326,7 +414,7 @@ public static class Results
     {
         if (Path.IsPathRooted(path))
         {
-            return new PhysicalFileResult(path, contentType)
+            return new PhysicalFileHttpResult(path, contentType)
             {
                 FileDownloadName = fileDownloadName,
                 LastModified = lastModified,
@@ -336,7 +424,7 @@ public static class Results
         }
         else
         {
-            return new VirtualFileResult(path, contentType)
+            return new VirtualFileHttpResult(path, contentType)
             {
                 FileDownloadName = fileDownloadName,
                 LastModified = lastModified,
@@ -360,7 +448,7 @@ public static class Results
     /// <param name="preserveMethod">If set to true, make the temporary redirect (307) or permanent redirect (308) preserve the initial request method.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult Redirect(string url, bool permanent = false, bool preserveMethod = false)
-        => new RedirectResult(url, permanent, preserveMethod);
+        => new RedirectHttpResult(url, permanent, preserveMethod);
 
     /// <summary>
     /// Redirects to the specified <paramref name="localUrl"/>.
@@ -376,7 +464,7 @@ public static class Results
     /// <param name="preserveMethod">If set to true, make the temporary redirect (307) or permanent redirect (308) preserve the initial request method.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult LocalRedirect(string localUrl, bool permanent = false, bool preserveMethod = false)
-        => new LocalRedirectResult(localUrl, permanent, preserveMethod);
+        => new RedirectHttpResult(localUrl, acceptLocalUrlOnly: true, permanent, preserveMethod);
 
     /// <summary>
     /// Redirects to the specified route.
@@ -394,7 +482,7 @@ public static class Results
     /// <param name="fragment">The fragment to add to the URL.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult RedirectToRoute(string? routeName = null, object? routeValues = null, bool permanent = false, bool preserveMethod = false, string? fragment = null)
-        => new RedirectToRouteResult(
+        => new RedirectToRouteHttpResult(
             routeName: routeName,
             routeValues: routeValues,
             permanent: permanent,
@@ -402,12 +490,12 @@ public static class Results
             fragment: fragment);
 
     /// <summary>
-    /// Creates a <see cref="StatusCodeResult"/> object by specifying a <paramref name="statusCode"/>.
+    /// Creates a <see cref="StatusCodeHttpResult"/> object by specifying a <paramref name="statusCode"/>.
     /// </summary>
     /// <param name="statusCode">The status code to set on the response.</param>
-    /// <returns>The created <see cref="StatusCodeResult"/> object for the response.</returns>
+    /// <returns>The created <see cref="StatusCodeHttpResult"/> object for the response.</returns>
     public static IResult StatusCode(int statusCode)
-        => new StatusCodeResult(statusCode);
+        => ResultsCache.StatusCode(statusCode);
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status404NotFound"/> response.
@@ -415,14 +503,14 @@ public static class Results
     /// <param name="value">The value to be included in the HTTP response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult NotFound(object? value = null)
-        => new NotFoundObjectResult(value);
+        => value is null ? ResultsCache.NotFound : new NotFoundObjectHttpResult(value);
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status401Unauthorized"/> response.
     /// </summary>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult Unauthorized()
-        => new UnauthorizedResult();
+        => ResultsCache.Unauthorized;
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status400BadRequest"/> response.
@@ -430,7 +518,7 @@ public static class Results
     /// <param name="error">An error object to be included in the HTTP response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult BadRequest(object? error = null)
-        => new BadRequestObjectResult(error);
+        => error is null ? ResultsCache.BadRequest : new BadRequestObjectHttpResult(error);
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status409Conflict"/> response.
@@ -438,14 +526,14 @@ public static class Results
     /// <param name="error">An error object to be included in the HTTP response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult Conflict(object? error = null)
-        => new ConflictObjectResult(error);
+        => error is null ? ResultsCache.Conflict : new ConflictObjectHttpResult(error);
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status204NoContent"/> response.
     /// </summary>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult NoContent()
-        => new NoContentResult();
+        => ResultsCache.NoContent;
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status200OK"/> response.
@@ -453,7 +541,7 @@ public static class Results
     /// <param name="value">The value to be included in the HTTP response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult Ok(object? value = null)
-        => new OkObjectResult(value);
+        => value is null ? ResultsCache.Ok : new OkObjectHttpResult(value);
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status422UnprocessableEntity"/> response.
@@ -461,7 +549,7 @@ public static class Results
     /// <param name="error">An error object to be included in the HTTP response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult UnprocessableEntity(object? error = null)
-        => new UnprocessableEntityObjectResult(error);
+        => error is null ? ResultsCache.UnprocessableEntity : new UnprocessableEntityObjectHttpResult(error);
 
     /// <summary>
     /// Produces a <see cref="ProblemDetails"/> response.
@@ -498,10 +586,7 @@ public static class Results
             }
         }
 
-        return new ObjectResult(problemDetails)
-        {
-            ContentType = "application/problem+json",
-        };
+        return new ProblemHttpResult(problemDetails);
     }
 
     /// <summary>
@@ -511,10 +596,7 @@ public static class Results
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult Problem(ProblemDetails problemDetails)
     {
-        return new ObjectResult(problemDetails)
-        {
-            ContentType = "application/problem+json",
-        };
+        return new ProblemHttpResult(problemDetails);
     }
 
     /// <summary>
@@ -556,10 +638,7 @@ public static class Results
             }
         }
 
-        return new ObjectResult(problemDetails)
-        {
-            ContentType = "application/problem+json",
-        };
+        return new ProblemHttpResult(problemDetails);
     }
 
     /// <summary>
@@ -575,7 +654,7 @@ public static class Results
             throw new ArgumentNullException(nameof(uri));
         }
 
-        return new CreatedResult(uri, value);
+        return new CreatedHttpResult(uri, value);
     }
 
     /// <summary>
@@ -591,7 +670,7 @@ public static class Results
             throw new ArgumentNullException(nameof(uri));
         }
 
-        return new CreatedResult(uri, value);
+        return new CreatedHttpResult(uri, value);
     }
 
     /// <summary>
@@ -602,7 +681,7 @@ public static class Results
     /// <param name="value">The value to be included in the HTTP response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult CreatedAtRoute(string? routeName = null, object? routeValues = null, object? value = null)
-        => new CreatedAtRouteResult(routeName, routeValues, value);
+        => new CreatedAtRouteHttpResult(routeName, routeValues, value);
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status202Accepted"/> response.
@@ -611,7 +690,7 @@ public static class Results
     /// <param name="value">The optional content value to format in the response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult Accepted(string? uri = null, object? value = null)
-        => new AcceptedResult(uri, value);
+        => new AcceptedHttpResult(uri, value);
 
     /// <summary>
     /// Produces a <see cref="StatusCodes.Status202Accepted"/> response.
@@ -621,7 +700,12 @@ public static class Results
     /// <param name="value">The optional content value to format in the response body.</param>
     /// <returns>The created <see cref="IResult"/> for the response.</returns>
     public static IResult AcceptedAtRoute(string? routeName = null, object? routeValues = null, object? value = null)
-        => new AcceptedAtRouteResult(routeName, routeValues, value);
+        => new AcceptedAtRouteHttpResult(routeName, routeValues, value);
+
+    /// <summary>
+    /// Produces an empty result response, that when executed will do nothing.
+    /// </summary>
+    public static IResult Empty { get; } = EmptyHttpResult.Instance;
 
     /// <summary>
     /// Provides a container for external libraries to extend

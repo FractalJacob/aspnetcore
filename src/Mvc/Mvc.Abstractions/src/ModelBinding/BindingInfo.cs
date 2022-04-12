@@ -1,9 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -248,8 +247,16 @@ public class BindingInfo
             PropertyFilterProvider = modelMetadata.PropertyFilterProvider;
         }
 
-        // There isn't a ModelMetadata feature to configure AllowEmptyInputInBodyModelBinding,
-        // so nothing to infer from it.
+        // If the EmptyBody behavior is not configured will be inferred
+        // as Allow when the NullablityState == NullablityStateNull or HasDefaultValue
+        // https://github.com/dotnet/aspnetcore/issues/39754
+        if (EmptyBodyBehavior == EmptyBodyBehavior.Default &&
+            BindingSource == BindingSource.Body &&
+            (modelMetadata.NullabilityState == NullabilityState.Nullable || modelMetadata.IsNullableValueType || modelMetadata.HasDefaultValue))
+        {
+            isBindingInfoPresent = true;
+            EmptyBodyBehavior = EmptyBodyBehavior.Allow;
+        }
 
         return isBindingInfoPresent;
     }

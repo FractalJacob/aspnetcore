@@ -1,14 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Http.Result;
 
@@ -24,7 +21,7 @@ public class SignOutResultTest
             .Returns(Task.CompletedTask)
             .Verifiable();
         var httpContext = GetHttpContext(auth.Object);
-        var result = new SignOutResult();
+        var result = new SignOutHttpResult();
 
         // Act
         await result.ExecuteAsync(httpContext);
@@ -43,7 +40,7 @@ public class SignOutResultTest
             .Returns(Task.CompletedTask)
             .Verifiable();
         var httpContext = GetHttpContext(auth.Object);
-        var result = new SignOutResult("", null);
+        var result = new SignOutHttpResult("", null);
 
         // Act
         await result.ExecuteAsync(httpContext);
@@ -67,7 +64,7 @@ public class SignOutResultTest
             .Returns(Task.CompletedTask)
             .Verifiable();
         var httpContext = GetHttpContext(auth.Object);
-        var result = new SignOutResult(new[] { "Scheme1", "Scheme2" }, authProperties);
+        var result = new SignOutHttpResult(new[] { "Scheme1", "Scheme2" }, authProperties);
 
         // Act
         await result.ExecuteAsync(httpContext);
@@ -88,6 +85,7 @@ public class SignOutResultTest
     private static IServiceCollection CreateServices()
     {
         var services = new ServiceCollection();
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         return services;
     }

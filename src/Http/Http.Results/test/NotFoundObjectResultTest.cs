@@ -1,23 +1,32 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Http.Result;
 
 public class NotFoundObjectResultTest
 {
     [Fact]
+    public void NotFoundObjectResult_ProblemDetails_SetsStatusCodeAndValue()
+    {
+        // Arrange & Act
+        var obj = new HttpValidationProblemDetails();
+        var result = new NotFoundObjectHttpResult(obj);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, obj.Status);
+        Assert.Equal(obj, result.Value);
+    }
+
+    [Fact]
     public void NotFoundObjectResult_InitializesStatusCode()
     {
         // Arrange & act
-        var notFound = new NotFoundObjectResult(null);
+        var notFound = new NotFoundObjectHttpResult(null);
 
         // Assert
         Assert.Equal(StatusCodes.Status404NotFound, notFound.StatusCode);
@@ -27,7 +36,7 @@ public class NotFoundObjectResultTest
     public void NotFoundObjectResult_InitializesStatusCodeAndResponseContent()
     {
         // Arrange & act
-        var notFound = new NotFoundObjectResult("Test Content");
+        var notFound = new NotFoundObjectHttpResult("Test Content");
 
         // Assert
         Assert.Equal(StatusCodes.Status404NotFound, notFound.StatusCode);
@@ -39,7 +48,7 @@ public class NotFoundObjectResultTest
     {
         // Arrange
         var httpContext = GetHttpContext();
-        var result = new NotFoundObjectResult("Test Content");
+        var result = new NotFoundObjectHttpResult("Test Content");
 
         // Act
         await result.ExecuteAsync(httpContext);

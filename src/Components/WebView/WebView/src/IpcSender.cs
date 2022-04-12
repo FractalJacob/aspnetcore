@@ -1,9 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading.Tasks;
+using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.JSInterop;
 
@@ -62,8 +61,12 @@ internal class IpcSender
 
     public void NotifyUnhandledException(Exception exception)
     {
+        // Send the serialized exception to the WebView for display
         var message = IpcCommon.Serialize(IpcCommon.OutgoingMessageType.NotifyUnhandledException, exception.Message, exception.StackTrace);
         _dispatcher.InvokeAsync(() => _messageDispatcher(message));
+
+        // Also rethrow so the AppDomain's UnhandledException handler gets notified
+        _dispatcher.InvokeAsync(() => ExceptionDispatchInfo.Capture(exception).Throw());
     }
 
     private void DispatchMessageWithErrorHandling(string message)

@@ -1,14 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Net.Http.Headers;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Http.Result;
 
@@ -18,14 +15,12 @@ public class ContentResultTest
     public async Task ContentResult_ExecuteAsync_Response_NullContent_SetsContentTypeAndEncoding()
     {
         // Arrange
-        var contentResult = new ContentResult
+        var contentType = new MediaTypeHeaderValue("text/plain")
         {
-            Content = null,
-            ContentType = new MediaTypeHeaderValue("text/plain")
-            {
-                Encoding = Encoding.Unicode
-            }.ToString()
-        };
+            Encoding = Encoding.Unicode
+        }.ToString();
+
+        var contentResult = new ContentHttpResult(null, contentType);
         var httpContext = GetHttpContext();
 
         // Act
@@ -112,11 +107,7 @@ public class ContentResultTest
         byte[] expectedContentData)
     {
         // Arrange
-        var contentResult = new ContentResult
-        {
-            Content = content,
-            ContentType = contentType?.ToString()
-        };
+        var contentResult = new ContentHttpResult(content, contentType?.ToString());
         var httpContext = GetHttpContext();
         var memoryStream = new MemoryStream();
         httpContext.Response.Body = memoryStream;
@@ -136,6 +127,7 @@ public class ContentResultTest
     {
         var services = new ServiceCollection();
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         return services;
     }
 

@@ -1,10 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -126,6 +124,21 @@ public sealed class EndpointMetadataCollection : IReadOnlyList<object>
         var results = matches == null ? Array.Empty<T>() : matches.ToArray();
         _cache.TryAdd(typeof(T), results);
         return results;
+    }
+
+    /// <summary>
+    /// Gets the most significant metadata item of type <typeparamref name="T"/>.
+    /// Throws an <see cref="InvalidOperationException"/> if the metadata is not found.
+    /// </summary>
+    /// <typeparam name="T">The type of metadata to retrieve.</typeparam>
+    /// <returns>
+    /// The most significant metadata of type <typeparamref name="T"/>.
+    /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T GetRequiredMetadata<T>() where T : class
+    {
+        var metadata = GetMetadata<T>();
+        return metadata ?? throw new InvalidOperationException($"Metadata '{typeof(T)}' is not found.");
     }
 
     /// <summary>

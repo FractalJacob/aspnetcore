@@ -10,7 +10,7 @@ internal class IdentityPageModelConvention<TUser> : IPageApplicationModelConvent
 {
     public void Apply(PageApplicationModel model)
     {
-        var defaultUIAttribute = model.ModelType.GetCustomAttribute<IdentityDefaultUIAttribute>();
+        var defaultUIAttribute = model.ModelType?.GetCustomAttribute<IdentityDefaultUIAttribute>();
         if (defaultUIAttribute == null)
         {
             return;
@@ -21,7 +21,7 @@ internal class IdentityPageModelConvention<TUser> : IPageApplicationModelConvent
         model.ModelType = templateInstance.GetTypeInfo();
     }
 
-    private void ValidateTemplate(Type template)
+    private static void ValidateTemplate(Type template)
     {
         if (template.IsAbstract || !template.IsGenericTypeDefinition)
         {

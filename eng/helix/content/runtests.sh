@@ -18,7 +18,6 @@ export PATH="$PATH:$DIR:$DIR/node/bin"
 # Set playwright stuff
 export PLAYWRIGHT_BROWSERS_PATH="$DIR/ms-playwright"
 if [[ "$helixQueue" == *"OSX"* ]]; then
-    export PLAYWRIGHT_DRIVER_PATH="$DIR/.playwright/osx/native/playwright.sh"
     PLAYWRIGHT_NODE_PATH=$DIR/.playwright/osx/native/node
 else
     export PLAYWRIGHT_DRIVER_PATH="$DIR/.playwright/unix/native/playwright.sh"
@@ -77,7 +76,16 @@ sync
 exit_code=0
 
 echo "Restore: dotnet restore RunTests/RunTests.csproj --ignore-failed-sources"
-dotnet restore RunTests/RunTests.csproj --ignore-failed-sources
+
+# --verbosity diagnostic can be removed when random failures are identified
+dotnet restore RunTests/RunTests.csproj --ignore-failed-sources --verbosity diagnostic
+
+exit_code=$?
+
+if [[ $exit_code != 0 ]]; then
+    echo "Restore runtests failed: exit_code=$exit_code"
+    exit $exit_code
+fi
 
 echo "Running tests: dotnet run --no-restore --project RunTests/RunTests.csproj -- --target $1 --runtime $2 --queue $helixQueue --arch $4 --quarantined $5 --ef $6 --helixTimeout $7"
 dotnet run --no-restore --project RunTests/RunTests.csproj -- --target $1 --runtime $2 --queue $helixQueue --arch $4 --quarantined $5 --ef $6 --helixTimeout $7

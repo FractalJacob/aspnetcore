@@ -4,7 +4,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Http.Result;
 
@@ -14,7 +13,7 @@ public class StatusCodeResultTests
     public void StatusCodeResult_ExecuteResultSetsResponseStatusCode()
     {
         // Arrange
-        var result = new StatusCodeResult(StatusCodes.Status404NotFound);
+        var result = new StatusCodeHttpResult(StatusCodes.Status404NotFound);
 
         var httpContext = GetHttpContext();
 
@@ -29,6 +28,7 @@ public class StatusCodeResultTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         return services;
     }
 

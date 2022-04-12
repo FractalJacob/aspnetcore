@@ -7,8 +7,6 @@
 // Microsoft.AspNetCore.App, thus preventing it from being used anywhere ASP.NET Core isn't supported (such as
 // various platforms that .NET MAUI runs on, such as Android and iOS).
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.AspNetCore.Components.WebView;
@@ -154,7 +152,7 @@ internal class FileExtensionContentTypeProvider : IContentTypeProvider
                 { ".jpe", "image/jpeg" },
                 { ".jpeg", "image/jpeg" },
                 { ".jpg", "image/jpeg" },
-                { ".js", "application/javascript" },
+                { ".js", "text/javascript" },
                 { ".json", "application/json" },
                 { ".jsx", "text/jscript" },
                 { ".latex", "application/x-latex" },
@@ -183,6 +181,7 @@ internal class FileExtensionContentTypeProvider : IContentTypeProvider
                 { ".mid", "audio/mid" },
                 { ".midi", "audio/mid" },
                 { ".mix", "application/octet-stream" },
+                { ".mjs", "text/javascript" },
                 { ".mmf", "application/x-smaf" },
                 { ".mno", "text/xml" },
                 { ".mny", "application/x-msmoney" },

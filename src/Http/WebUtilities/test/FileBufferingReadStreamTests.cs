@@ -1,13 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Buffers;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Moq;
-using Xunit;
 
 namespace Microsoft.AspNetCore.WebUtilities;
 
@@ -22,9 +17,11 @@ public class FileBufferingReadStreamTests
     [Fact]
     public void FileBufferingReadStream_Properties_ExpectedValues()
     {
-        var inner = MakeStream(1024 * 2);
-        using (var stream = new FileBufferingReadStream(inner, 1024, null, Directory.GetCurrentDirectory()))
+        using var inner = MakeStream(1024 * 2);
+        System.IO.Stream bufferSteam;
         {
+            using var stream = new FileBufferingReadStream(inner, 1024, null, Directory.GetCurrentDirectory());
+            bufferSteam = stream;
             Assert.True(stream.CanRead);
             Assert.True(stream.CanSeek);
             Assert.False(stream.CanWrite);
@@ -33,6 +30,10 @@ public class FileBufferingReadStreamTests
             Assert.True(stream.InMemory);
             Assert.Null(stream.TempFileName);
         }
+        Assert.False(bufferSteam.CanRead);  // Buffered Stream now disposed
+        Assert.False(bufferSteam.CanSeek);
+        Assert.True(inner.CanRead);         // Inner Stream not disposed
+        Assert.True(inner.CanSeek);
     }
 
     [Fact]

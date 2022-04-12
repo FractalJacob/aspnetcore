@@ -9,8 +9,8 @@
   "generatorVersions": "[1.0.0.0-*)",
   "description": "A project template for creating an ASP.NET Core application with an example Controller for a RESTful HTTP service. This template can also be used for ASP.NET Core MVC Views and Controllers.",
   "groupIdentity": "Microsoft.Web.WebApi",
-  "precedence": "8000",
-  "identity": "Microsoft.Web.WebApi.CSharp.6.0",
+  "precedence": "9000",
+  "identity": "Microsoft.Web.WebApi.CSharp.7.0",
   "shortName": "webapi",
   "tags": {
     "language": "C#",
@@ -36,6 +36,21 @@
           "exclude": [
             "Properties/launchSettings.json"
           ]
+        },
+        {
+          "condition": "(!UseProgramMain)",
+          "exclude": [
+            "Program.Main.cs"
+          ]
+        },
+        {
+          "condition": "(UseProgramMain && !UseMinimalAPIs)",
+          "exclude": [
+            "Program.cs"
+          ],
+          "rename": {
+            "Program.Main.cs": "Program.cs"
+          }
         },
         {
           "condition": "(UseMinimalAPIs)",
@@ -364,6 +379,13 @@
     "UseControllers": {
       "type": "computed",
       "value": "(!UseMinimalAPIs)"
+    },
+    "UseProgramMain": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "displayName": "Do not use top-level statements",
+      "description": "Whether to generate an explicit Program class and Main method instead of top-level statements."
     }
   },
   "primaryOutputs": [
@@ -374,6 +396,7 @@
   "defaultName": "WebApplication",
   "postActions": [
     {
+      "id": "restore",
       "condition": "(!skipRestore)",
       "description": "Restore NuGet packages required by this project.",
       "manualInstructions": [

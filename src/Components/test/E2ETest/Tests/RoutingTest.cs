@@ -8,7 +8,6 @@ using BasicTestApp.RouterTest;
 using Microsoft.AspNetCore.Components.E2ETest.Infrastructure;
 using Microsoft.AspNetCore.Components.E2ETest.Infrastructure.ServerFixtures;
 using Microsoft.AspNetCore.E2ETesting;
-using Microsoft.AspNetCore.Testing;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Interactions;
 using Xunit.Abstractions;
@@ -784,7 +783,7 @@ public class RoutingTest : ServerTestBase<ToggleExecutionModeServerFixture<Progr
     [Fact]
     public void CanArriveAtQueryStringPageWithStringQuery()
     {
-        SetUrlViaPushState("/WithQueryParameters/Abc?stringvalue=Hello+there");
+        SetUrlViaPushState("/WithQueryParameters/Abc?stringvalue=Hello+there#123");
 
         var app = Browser.MountTestComponent<TestRouter>();
         Assert.Equal("Hello Abc .", app.FindElement(By.Id("test-info")).Text);

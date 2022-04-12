@@ -1,10 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Buffers;
 using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Numerics;
@@ -163,13 +161,13 @@ internal sealed partial class HttpResponseHeaders : HttpHeaders
                 : default;
         }
 
-        public KeyValuePair<string, StringValues> Current => _current;
+        public readonly KeyValuePair<string, StringValues> Current => _current;
 
-        internal KnownHeaderType CurrentKnownType => _currentKnownType;
+        internal readonly KnownHeaderType CurrentKnownType => _currentKnownType;
 
-        object IEnumerator.Current => _current;
+        readonly object IEnumerator.Current => _current;
 
-        public void Dispose()
+        public readonly void Dispose()
         {
         }
 
@@ -179,5 +177,4 @@ internal sealed partial class HttpResponseHeaders : HttpHeaders
             _next = _currentBits != 0 ? BitOperations.TrailingZeroCount(_currentBits) : -1;
         }
     }
-
 }
